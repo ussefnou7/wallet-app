@@ -1,0 +1,43 @@
+# Maven / Java
+/target/
+*.class
+*.jar
+*.war
+*.ear
+
+# IntelliJ
+/.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# Build outputs
+/out/
+/build/
+
+# Logs and temp files
+*.log
+*.tmp
+logs/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Maven wrapper
+/.mvn/wrapper/maven-wrapper.jar
+
+# Environment
+.env
+
+# Local config
+application-*.yml
+
+# Other
+node_modules/
