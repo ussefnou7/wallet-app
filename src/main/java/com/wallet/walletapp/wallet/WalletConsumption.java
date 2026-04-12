@@ -2,10 +2,12 @@ package com.wallet.walletapp.wallet;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.YearMonth;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "wallet_consumption")
@@ -14,25 +16,52 @@ import java.time.YearMonth;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class WalletConsumption {
+public class WalletConsumption implements Persistable<UUID> {
 
     @Id
-    private Long walletId; // same as wallet id
+    @Column(name = "wallet_id", nullable = false, updatable = false)
+    private UUID walletId;
 
     @MapsId
-    @OneToOne
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "wallet_id")
     private Wallet wallet;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal dailyConsumed = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
+    @Builder.Default
     private BigDecimal monthlyConsumed = BigDecimal.ZERO;
 
     @Column(nullable = false)
-    private LocalDate lastDailyReset;
+    private LocalDate dailyWindowDate;
 
-    @Column(nullable = false)
-    private YearMonth lastMonthlyReset;
+    @Column(nullable = false, length = 7)
+    private String monthlyWindowKey;
+
+    private UUID lastProcessedTransactionId;
+
+    private LocalDateTime lastProcessedOccurredAt;
+
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public UUID getId() {
+        return walletId;
+    }
+
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
 }

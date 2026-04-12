@@ -45,7 +45,14 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UserResponse>> getAll() {
-        return ResponseEntity.ok(userService.getAllUsers());
+    public ResponseEntity<List<UserResponse>> getAll(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(userService.getAllUsers(page, size));
+    }
+
+    @GetMapping("/owners")
+    public ResponseEntity<List<UserResponse>> getAllOwners() {
+        return ResponseEntity.ok(userService.getAllOwners());
     }
 }

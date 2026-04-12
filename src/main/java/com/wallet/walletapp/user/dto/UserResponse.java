@@ -6,4 +6,5 @@ import lombok.Data;
 public class UserResponse {
     private String username;
     private String role;
+    private String tenantName;
 }

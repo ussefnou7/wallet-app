@@ -7,6 +7,8 @@ import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,15 +34,37 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserResponse> getAllUsers() {
+    public List<UserResponse> getAllUsers(Integer page, Integer size) {
         UserPrincipal user = currentUser();
         UUID tenantId = user.getTenantId();
 
-        List<User> users;
-        if (user.getRole() == Role.SYSTEM_ADMIN) {
-            users = userRepository.findAll();
+        List<UserReadProjection> users;
+        Pageable pageable = buildPageable(page, size);
+        if (pageable != null) {
+            if (user.getRole() == Role.SYSTEM_ADMIN) {
+                users = userRepository.findAllForRead(pageable).getContent();
+            } else {
+                users = userRepository.findAllByTenantIdForRead(tenantId, pageable).getContent();
+            }
+        } else if (user.getRole() == Role.SYSTEM_ADMIN) {
+            users = userRepository.findAllForRead();
         } else {
-            users = userRepository.findByTenantId(tenantId);
+            users = userRepository.findAllByTenantIdForRead(tenantId);
+        }
+
+        return users.stream().map(userMapper::toResponse).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<UserResponse> getAllOwners() {
+        UserPrincipal user = currentUser();
+        UUID tenantId = user.getTenantId();
+
+        List<UserReadProjection> users;
+        if (user.getRole() == Role.SYSTEM_ADMIN) {
+            users = userRepository.findAllByRoleForRead(Role.OWNER);
+        } else {
+            users = userRepository.findAllByTenantIdAndRoleForRead(tenantId,Role.OWNER);
         }
 
         return users.stream().map(userMapper::toResponse).collect(Collectors.toList());
@@ -82,7 +106,8 @@ public class UserServiceImpl implements UserService {
         user.setActive(request.isActive());
 
         user = userRepository.save(user);
-        return userMapper.toResponse(user);
+        return userMapper.toResponse(userRepository.findReadById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found after update")));
     }
 
     public UserResponse createOwner(CreateUserRequest request) {
@@ -108,7 +133,8 @@ public class UserServiceImpl implements UserService {
 
         owner = userRepository.save(owner);
         log.info("Owner '{}' created for tenant {}", owner.getUsername(), owner.getTenantId());
-        return userMapper.toResponse(owner);
+        return userMapper.toResponse(userRepository.findReadById(owner.getId())
+                .orElseThrow(() -> new RuntimeException("Owner not found after create")));
     }
 
     public UserResponse createUser(CreateUserRequest request) {
@@ -133,7 +159,8 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
         log.info("User '{}' created for tenant {}", user.getUsername(), user.getTenantId());
-        return userMapper.toResponse(user);
+        return userMapper.toResponse(userRepository.findReadById(user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found after create")));
 
     }
 
@@ -156,5 +183,17 @@ public class UserServiceImpl implements UserService {
 
     private UserPrincipal currentUser() {
         return (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private Pageable buildPageable(Integer page, Integer size) {
+        if (page == null && size == null) {
+            return null;
+        }
+        int resolvedPage = page != null ? page : 0;
+        int resolvedSize = size != null ? size : 20;
+        if (resolvedPage < 0 || resolvedSize < 1) {
+            throw new IllegalArgumentException("Invalid pagination parameters");
+        }
+        return PageRequest.of(resolvedPage, resolvedSize);
     }
 }

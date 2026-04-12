@@ -9,4 +9,5 @@ public class BranchResponse {
     private UUID branchId;
     private String name;
     private boolean active;
+    private String tenantName;
 }

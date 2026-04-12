@@ -6,6 +6,8 @@ import com.wallet.walletapp.tenant.dto.TenantResponse;
 import com.wallet.walletapp.tenant.dto.UpdateTenantRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,8 +39,11 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TenantResponse> getAllTenants() {
-        return tenantRepository.findAll()
+    public List<TenantResponse> getAllTenants(Integer page, Integer size) {
+        Pageable pageable = buildPageable(page, size);
+        return (pageable != null
+                ? tenantRepository.findAllByOrderByIdAsc(pageable).getContent()
+                : tenantRepository.findAllByOrderByIdAsc(PageRequest.of(0, Integer.MAX_VALUE)).getContent())
                 .stream()
                 .map(tenantMapper::toResponse)
                 .collect(Collectors.toList());
@@ -84,6 +89,18 @@ public class TenantServiceImpl implements TenantService {
         if (tenantRepository.existsByNameIgnoreCase(name)) {
             throw new IllegalArgumentException("Tenant name already exists");
         }
+    }
+
+    private Pageable buildPageable(Integer page, Integer size) {
+        if (page == null && size == null) {
+            return null;
+        }
+        int resolvedPage = page != null ? page : 0;
+        int resolvedSize = size != null ? size : 20;
+        if (resolvedPage < 0 || resolvedSize < 1) {
+            throw new IllegalArgumentException("Invalid pagination parameters");
+        }
+        return PageRequest.of(resolvedPage, resolvedSize);
     }
 
 }

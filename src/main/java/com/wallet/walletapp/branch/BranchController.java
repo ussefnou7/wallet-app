@@ -29,8 +29,10 @@ public class BranchController {
 
 
     @GetMapping
-    public ResponseEntity<List<BranchResponse>> getAllBranches() {
-        return ResponseEntity.ok(branchService.getAllBranches());
+    public ResponseEntity<List<BranchResponse>> getAllBranches(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(branchService.getAllBranches(page, size));
     }
 
     @PutMapping("/{id}")

@@ -13,10 +13,14 @@ public class TransactionResponse {
     private UUID id;
     private UUID tenantId;
     private UUID walletId;
+    private String externalTransactionId;
     private BigDecimal amount;
     private TransactionType type;
     private BigDecimal percent;
+    private String phoneNumber;
+    private boolean cash;
     private String description;
+    private LocalDateTime occurredAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 

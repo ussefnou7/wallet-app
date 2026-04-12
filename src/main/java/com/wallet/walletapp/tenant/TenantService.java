@@ -11,7 +11,7 @@ public interface TenantService {
 
     TenantResponse createTenant(CreateTenantRequest request);
 
-    List<TenantResponse> getAllTenants();
+    List<TenantResponse> getAllTenants(Integer page, Integer size);
 
     TenantResponse getTenantById(UUID id);
 

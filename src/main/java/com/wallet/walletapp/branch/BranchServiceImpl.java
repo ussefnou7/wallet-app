@@ -9,6 +9,8 @@ import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +39,8 @@ public class BranchServiceImpl implements BranchService {
 
         branch = branchRepository.save(branch);
         log.info("Branch '{}' created for tenant {}", branch.getName(), branch.getTenantId());
-        return branchMapper.toResponse(branch);
+        return branchMapper.toResponse(branchRepository.findReadById(branch.getId())
+                .orElseThrow(() -> new RuntimeException("Branch not found after create")));
     }
 
     @Transactional
@@ -46,13 +49,17 @@ public class BranchServiceImpl implements BranchService {
         branch.setName(request.getName());
         branch = branchRepository.save(branch);
         log.info("Branch {} updated", id);
-        return branchMapper.toResponse(branch);
+        return branchMapper.toResponse(branchRepository.findReadById(branch.getId())
+                .orElseThrow(() -> new RuntimeException("Branch not found after update")));
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<BranchResponse> getAllBranches() {
-        List<Branch> branches = branchRepository.findAll();
+    public List<BranchResponse> getAllBranches(Integer page, Integer size) {
+        Pageable pageable = buildPageable(page, size);
+        List<BranchReadProjection> branches = pageable != null
+                ? branchRepository.findAllForRead(pageable).getContent()
+                : branchRepository.findAllForRead();
         return branches.stream().map(branchMapper::toResponse).collect(Collectors.toList());
     }
 
@@ -97,6 +104,18 @@ public class BranchServiceImpl implements BranchService {
 
     private UserPrincipal currentUser() {
         return (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private Pageable buildPageable(Integer page, Integer size) {
+        if (page == null && size == null) {
+            return null;
+        }
+        int resolvedPage = page != null ? page : 0;
+        int resolvedSize = size != null ? size : 20;
+        if (resolvedPage < 0 || resolvedSize < 1) {
+            throw new IllegalArgumentException("Invalid pagination parameters");
+        }
+        return PageRequest.of(resolvedPage, resolvedSize);
     }
 
 }

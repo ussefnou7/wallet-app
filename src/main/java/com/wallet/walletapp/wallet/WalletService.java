@@ -11,7 +11,7 @@ public interface WalletService {
 
     WalletResponse createWallet(CreateWalletRequest request);
 
-    List<WalletResponse> getAllWallets();
+    List<WalletResponse> getAllWallets(Integer page, Integer size);
 
     WalletResponse getWalletById(UUID id);
 

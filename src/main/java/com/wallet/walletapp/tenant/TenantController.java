@@ -28,8 +28,10 @@ public class TenantController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
-    public ResponseEntity<List<TenantResponse>> getAllTenants() {
-        return ResponseEntity.ok(tenantService.getAllTenants());
+    public ResponseEntity<List<TenantResponse>> getAllTenants(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(tenantService.getAllTenants(page, size));
     }
 
     @GetMapping("/{id}")

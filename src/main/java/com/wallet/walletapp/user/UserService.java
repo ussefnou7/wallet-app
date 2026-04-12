@@ -15,7 +15,8 @@ public interface UserService {
 
     void deleteUser(UUID userId);
 
-    List<UserResponse> getAllUsers();
+    List<UserResponse> getAllUsers(Integer page, Integer size);
+    List<UserResponse> getAllOwners();
 
     UserResponse createOwner(CreateUserRequest request);
 

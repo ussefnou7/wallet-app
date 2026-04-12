@@ -12,6 +12,7 @@ public class WalletResponse {
 
     private UUID id;
     private UUID tenantId;
+    private String tenantName;
     private UUID branchId;
     private String name;
     private String number;
@@ -20,6 +21,10 @@ public class WalletResponse {
     private BigDecimal cashProfit;
     private BigDecimal dailyLimit;
     private BigDecimal monthlyLimit;
+    private BigDecimal dailySpent;
+    private BigDecimal monthlySpent;
+    private BigDecimal dailyPercent;
+    private BigDecimal monthlyPercent;
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

@@ -35,15 +35,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             if (token != null && jwtUtil.isTokenValid(token)) {
                 Claims claims = jwtUtil.extractClaims(token);
                 UUID userId = UUID.fromString(claims.get("userId", String.class));
-                UUID tenantId = UUID.fromString(claims.get("tenantId", String.class));
-                Role role = Role.valueOf(claims.get("role", String.class));
                 String username = claims.getSubject();
 
-                // Check if user exists and is active
                 Optional<User> userOpt = userRepository.findById(userId);
                 if (userOpt.isPresent()) {
                     User user = userOpt.get();
-                    if (user.isActive()) {
+                    if (user.isActive() && user.getUsername().equals(username)) {
+                        UUID tenantId = user.getTenantId();
+                        Role role = user.getRole();
                         TenantContext.setTenantId(tenantId);
 
                         UserPrincipal principal = new UserPrincipal(userId, username, null, tenantId, role);

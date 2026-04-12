@@ -1,6 +1,5 @@
 package com.wallet.walletapp.wallet;
 
-import com.wallet.walletapp.common.BaseEntity;
 import com.wallet.walletapp.common.TenantAwareEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -33,24 +32,28 @@ public class Wallet extends TenantAwareEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    WalletType type;
+    private WalletType type;
 
     @Column(nullable = false)
     private UUID branchId;
 
     // One-to-one with consumption
-    @OneToOne(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY, optional = false)
+    @OneToOne(mappedBy = "wallet", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private WalletConsumption consumption;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     @Builder.Default
-    BigDecimal dailyLimit = BigDecimal.ZERO;
+    private BigDecimal dailyLimit = BigDecimal.ZERO;
 
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 19, scale = 2)
     @Builder.Default
-    BigDecimal monthlyLimit = BigDecimal.ZERO;
+    private BigDecimal monthlyLimit = BigDecimal.ZERO;
 
-    BigDecimal cashProfit = BigDecimal.ZERO;
+    @Column(nullable = false, precision = 19, scale = 2)
+    @Builder.Default
+    private BigDecimal cashProfit = BigDecimal.ZERO;
 
-    BigDecimal walletProfit = BigDecimal.ZERO;
+    @Column(nullable = false, precision = 19, scale = 2)
+    @Builder.Default
+    private BigDecimal walletProfit = BigDecimal.ZERO;
 }

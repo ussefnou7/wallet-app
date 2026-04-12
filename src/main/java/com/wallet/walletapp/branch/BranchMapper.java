@@ -14,4 +14,13 @@ public class BranchMapper {
         return response;
     }
 
+    public BranchResponse toResponse(BranchReadProjection projection) {
+        BranchResponse response = new BranchResponse();
+        response.setBranchId(projection.getBranchId());
+        response.setActive(projection.getActive());
+        response.setName(projection.getName());
+        response.setTenantName(projection.getTenantName());
+        return response;
+    }
+
 }

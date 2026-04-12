@@ -32,8 +32,10 @@ public class WalletController {
     }
 
     @GetMapping
-    public ResponseEntity<List<WalletResponse>> getAllWallets() {
-        return ResponseEntity.ok(walletService.getAllWallets());
+    public ResponseEntity<List<WalletResponse>> getAllWallets(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        return ResponseEntity.ok(walletService.getAllWallets(page, size));
     }
 
     @GetMapping("/{id}")

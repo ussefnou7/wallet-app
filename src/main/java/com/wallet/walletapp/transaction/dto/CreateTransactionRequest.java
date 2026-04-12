@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -13,6 +14,9 @@ public class CreateTransactionRequest {
 
     @NotNull
     private UUID walletId;
+
+    @NotNull
+    private String externalTransactionId;
 
     @NotNull
     @DecimalMin(value = "0.01")
@@ -30,4 +34,6 @@ public class CreateTransactionRequest {
     private String description;
 
     private boolean isCash;
+
+    private LocalDateTime occurredAt;
 }
