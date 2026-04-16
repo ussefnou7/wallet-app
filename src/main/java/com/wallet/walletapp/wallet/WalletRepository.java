@@ -232,4 +232,6 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
             order by w.tenantId, w.id
             """)
     Page<WalletReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId, Pageable pageable);
+
+    long countByTenantId(UUID tenantId);
 }

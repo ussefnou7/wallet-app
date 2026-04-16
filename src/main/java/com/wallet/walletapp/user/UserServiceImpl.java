@@ -1,6 +1,7 @@
 package com.wallet.walletapp.user;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
@@ -26,6 +27,7 @@ public class UserServiceImpl implements UserService {
     private final TenantRepository tenantRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final SubscriptionAccessService subscriptionAccessService;
 
 
     @Override
@@ -126,6 +128,8 @@ public class UserServiceImpl implements UserService {
 
         // ✅ Validate tenant exists
         tenantRepository.findById(request.getTenantId()).orElseThrow(() -> new RuntimeException("Tenant not found"));
+        subscriptionAccessService.validateValidSubscription(request.getTenantId());
+        subscriptionAccessService.validateCreateUserLimit(request.getTenantId());
 
         validateUser(request.getUsername());
 
@@ -153,6 +157,8 @@ public class UserServiceImpl implements UserService {
         }
          */
 
+        subscriptionAccessService.validateValidSubscription(currentUser.getTenantId());
+        subscriptionAccessService.validateCreateUserLimit(currentUser.getTenantId());
         validateUser(request.getUsername());
 
         User user = buildUser(request.getUsername(), request.getPassword(), request.getRole() != null ? request.getRole() : Role.USER, currentUser.getTenantId());

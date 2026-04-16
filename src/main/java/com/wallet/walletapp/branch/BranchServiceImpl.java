@@ -5,6 +5,7 @@ import com.wallet.walletapp.branch.dto.CreateBranchRequest;
 import com.wallet.walletapp.branch.dto.UpdateBranchRequest;
 import com.wallet.walletapp.branch.dto.BranchResponse;
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.user.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -28,13 +29,18 @@ public class BranchServiceImpl implements BranchService {
     private final BranchMapper branchMapper;
     private final BranchUserRepository branchUserRepository;
     private final UserRepository userRepository;
+    private final SubscriptionAccessService subscriptionAccessService;
 
 
     @Transactional
     public BranchResponse createBranch(CreateBranchRequest request) {
+        UserPrincipal user = currentUser();
+        UUID tenantId = user.getRole() == Role.SYSTEM_ADMIN ? request.getTenantId() : user.getTenantId();
+        subscriptionAccessService.validateValidSubscription(tenantId);
+        subscriptionAccessService.validateCreateBranchLimit(tenantId);
 
         Branch branch = new Branch();
-        branch.setTenantId(request.getTenantId());
+        branch.setTenantId(tenantId);
         branch.setName(request.getName());
 
         branch = branchRepository.save(branch);
@@ -56,10 +62,23 @@ public class BranchServiceImpl implements BranchService {
     @Override
     @Transactional(readOnly = true)
     public List<BranchResponse> getAllBranches(Integer page, Integer size) {
+        UserPrincipal user = currentUser();
+        UUID tenantId = user.getTenantId();
+
         Pageable pageable = buildPageable(page, size);
-        List<BranchReadProjection> branches = pageable != null
-                ? branchRepository.findAllForRead(pageable).getContent()
-                : branchRepository.findAllForRead();
+        List<BranchReadProjection> branches;
+        if (pageable != null) {
+            if (user.getRole() == Role.SYSTEM_ADMIN) {
+                branches = branchRepository.findAllForRead(pageable).getContent();
+            } else {
+                branches = branchRepository.findAllByTenantIdForRead(tenantId, pageable).getContent();
+            }
+        } else if (user.getRole() == Role.SYSTEM_ADMIN) {
+            branches = branchRepository.findAllForRead();
+        } else {
+            branches = branchRepository.findAllByTenantIdForRead(tenantId);
+        }
+
         return branches.stream().map(branchMapper::toResponse).collect(Collectors.toList());
     }
 

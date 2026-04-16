@@ -79,4 +79,6 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<UserReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId, Pageable pageable);
 
     boolean existsByUsername(String username);
+
+    long countByTenantId(UUID tenantId);
 }

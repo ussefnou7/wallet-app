@@ -2,6 +2,8 @@
 @token = REPLACE_WITH_JWT_TOKEN
 @walletId = 11111111-1111-1111-1111-111111111111
 @transactionId = 22222222-2222-2222-2222-222222222222
+@planId = 11111111-1111-1111-1111-111111111111
+@tenantId = aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
 
 ### Register
 POST {{baseUrl}}/api/v1/auth/register
@@ -124,4 +126,60 @@ Content-Type: application/json
 
 ### Delete User
 DELETE {{baseUrl}}/api/users/55555555-5555-5555-5555-555555555555
+Authorization: Bearer {{token}}
+
+### Create Plan (SYSTEM_ADMIN)
+POST {{baseUrl}}/api/v1/plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Starter Plan",
+  "description": "Basic plan for small tenants",
+  "maxUsers": 10,
+  "maxWallets": 5,
+  "maxBranches": 2,
+  "active": true
+}
+
+### Get All Plans (SYSTEM_ADMIN)
+GET {{baseUrl}}/api/v1/plans
+Authorization: Bearer {{token}}
+
+### Get Plan By Id (SYSTEM_ADMIN)
+GET {{baseUrl}}/api/v1/plans/{{planId}}
+Authorization: Bearer {{token}}
+
+### Update Plan (SYSTEM_ADMIN)
+PUT {{baseUrl}}/api/v1/plans/{{planId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Starter Plan Updated",
+  "description": "Updated starter plan",
+  "maxUsers": 15,
+  "maxWallets": 7,
+  "maxBranches": 3,
+  "active": true
+}
+
+### Delete Plan (SYSTEM_ADMIN)
+DELETE {{baseUrl}}/api/v1/plans/{{planId}}
+Authorization: Bearer {{token}}
+
+### Assign Current Tenant Subscription (SYSTEM_ADMIN)
+PUT {{baseUrl}}/api/v1/tenant-subscriptions/current
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "tenantId": "{{tenantId}}",
+  "planId": "{{planId}}",
+  "startDate": "2026-04-14",
+  "expireDate": "2026-05-14"
+}
+
+### Get Current Tenant Subscription (SYSTEM_ADMIN)
+GET {{baseUrl}}/api/v1/tenant-subscriptions/tenants/{{tenantId}}
 Authorization: Bearer {{token}}

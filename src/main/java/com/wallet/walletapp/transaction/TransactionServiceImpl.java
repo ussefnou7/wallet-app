@@ -8,15 +8,13 @@ import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.Wallet;
+import com.wallet.walletapp.wallet.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
 import com.wallet.walletapp.wallet.WalletUserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
-import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +35,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final WalletRepository walletRepository;
     private final WalletUserRepository walletUserRepository;
     private final TransactionMapper transactionMapper;
-    private final ApplicationEventPublisher eventPublisher;
+    private final WalletConsumptionService walletConsumptionService;
 
     @Override
     @Transactional
@@ -64,12 +62,7 @@ public class TransactionServiceImpl implements TransactionService {
 
             applyBalanceUpdate(wallet, saved);
             walletRepository.save(wallet);
-
-            eventPublisher.publishEvent(new TransactionIngestedEvent(
-                    saved.getId(),
-                    saved.getWalletId(),
-                    saved.getOccurredAt()
-            ));
+            walletConsumptionService.applyTransaction(wallet, saved);
 
             log.info("Transaction {} ({}) of {} created on wallet {}",
                     saved.getId(), saved.getType(), saved.getAmount(), wallet.getId());

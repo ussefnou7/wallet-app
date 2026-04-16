@@ -26,6 +26,15 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
             select b.id as branchId, b.name as name, b.active as active, t.name as tenantName
             from Branch b
             join Tenant t on t.id = b.tenantId
+            where b.tenantId = :tenantId
+            order by b.tenantId, b.id
+            """)
+    List<BranchReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId);
+
+    @Query("""
+            select b.id as branchId, b.name as name, b.active as active, t.name as tenantName
+            from Branch b
+            join Tenant t on t.id = b.tenantId
             where b.id = :id
             """)
     Optional<BranchReadProjection> findReadById(@Param("id") UUID id);
@@ -37,4 +46,15 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
             order by b.tenantId, b.id
             """)
     Page<BranchReadProjection> findAllForRead(Pageable pageable);
+
+    @Query("""
+            select b.id as branchId, b.name as name, b.active as active, t.name as tenantName
+            from Branch b
+            join Tenant t on t.id = b.tenantId
+            where b.tenantId = :tenantId
+            order by b.tenantId, b.id
+            """)
+    Page<BranchReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId, Pageable pageable);
+
+    long countByTenantId(UUID tenantId);
 }

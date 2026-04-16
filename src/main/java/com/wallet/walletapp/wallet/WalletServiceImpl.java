@@ -3,6 +3,7 @@ package com.wallet.walletapp.wallet;
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.UnauthorizedException;
+import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.dto.CreateWalletRequest;
 import com.wallet.walletapp.wallet.dto.UpdateWalletRequest;
@@ -32,14 +33,18 @@ public class WalletServiceImpl implements WalletService {
     private final WalletConsumptionService walletConsumptionService;
     private final WalletConsumptionRepository walletConsumptionRepository;
     private final WalletMapper walletMapper;
+    private final SubscriptionAccessService subscriptionAccessService;
 
     @Override
     @Transactional
     public WalletResponse createWallet(CreateWalletRequest request) {
         UserPrincipal user = currentUser();
+        UUID tenantId = user.getRole() == Role.SYSTEM_ADMIN ? request.getTenantId() : user.getTenantId();
+        subscriptionAccessService.validateValidSubscription(tenantId);
+        subscriptionAccessService.validateCreateWalletLimit(tenantId);
 
         Wallet wallet = new Wallet();
-        wallet.setTenantId(user.getRole() == Role.SYSTEM_ADMIN ? request.getTenantId() : user.getTenantId());
+        wallet.setTenantId(tenantId);
         wallet.setBranchId(request.getBranchId());
         wallet.setName(request.getName());
         wallet.setType(request.getType());
@@ -49,7 +54,7 @@ public class WalletServiceImpl implements WalletService {
         wallet.setMonthlyLimit(request.getMonthlyLimit());
 
         wallet = walletRepository.save(wallet);
-        wallet.setConsumption(walletConsumptionService.createInitialSnapshot(wallet));
+        wallet.setConsumption(walletConsumptionService.createForWallet(wallet));
         log.info("Wallet '{}' created for tenant {}", wallet.getName(), wallet.getTenantId());
         return walletMapper.toResponse(
                 walletRepository.findReadById(wallet.getId())
@@ -151,7 +156,7 @@ public class WalletServiceImpl implements WalletService {
     }
 
     private Wallet withCurrentConsumption(Wallet wallet) {
-        wallet.setConsumption(walletConsumptionService.getOrCreateCurrentSnapshot(wallet));
+        wallet.setConsumption(walletConsumptionService.getByWallet(wallet));
         return wallet;
     }
 
