@@ -1,0 +1,3 @@
+ALTER TABLE wallet_users
+    ADD COLUMN IF NOT EXISTS created_at TIMESTAMP,
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP;
