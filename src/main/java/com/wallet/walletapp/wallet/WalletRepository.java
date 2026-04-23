@@ -66,6 +66,9 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
     @EntityGraph(attributePaths = "consumption")
     Optional<Wallet> findByIdAndTenantId(UUID id, UUID tenantId);
 
+    @EntityGraph(attributePaths = "consumption")
+    List<Wallet> findAllByTenantIdOrderByIdAsc(UUID tenantId);
+
     @Query("""
             select
                 w.id as id,
