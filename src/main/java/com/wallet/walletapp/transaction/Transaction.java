@@ -45,5 +45,5 @@ public class Transaction extends TenantAwareEntity {
     private String description;
 
     @Column(nullable = false)
-    private LocalDateTime occurredAt;
+    private LocalDateTime occurredAt;   
 }

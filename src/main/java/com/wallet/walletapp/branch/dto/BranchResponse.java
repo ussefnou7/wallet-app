@@ -10,4 +10,6 @@ public class BranchResponse {
     private String name;
     private boolean active;
     private String tenantName;
+    private long userCount;
+    private long walletCount;
 }

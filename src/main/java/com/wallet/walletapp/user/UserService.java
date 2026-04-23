@@ -1,5 +1,6 @@
 package com.wallet.walletapp.user;
 
+import com.wallet.walletapp.user.dto.AssignBranchRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
@@ -12,6 +13,10 @@ public interface UserService {
     UserResponse createUser(CreateUserRequest request);
 
     UserResponse updateUser(UUID userId, UpdateUserRequest request);
+
+    UserResponse assignUserToBranch(UUID userId, AssignBranchRequest request);
+
+    void unassignUserFromBranch(UUID userId);
 
     void deleteUser(UUID userId);
 

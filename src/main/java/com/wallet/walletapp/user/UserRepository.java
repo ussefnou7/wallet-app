@@ -19,7 +19,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findByTenantIdAndRole(UUID tenantId, Role role);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             order by u.tenantId, u.id
@@ -27,7 +27,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<UserReadProjection> findAllForRead();
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             where u.id = :id
@@ -35,7 +35,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<UserReadProjection> findReadById(@Param("id") UUID id);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             where u.tenantId = :tenantId
@@ -44,7 +44,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<UserReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             where u.role = :role
@@ -53,7 +53,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<UserReadProjection> findAllByRoleForRead(@Param("role") Role role);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             where u.tenantId = :tenantId and u.role = :role
@@ -62,7 +62,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     List<UserReadProjection> findAllByTenantIdAndRoleForRead(@Param("tenantId") UUID tenantId, @Param("role") Role role);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             order by u.tenantId, u.id
@@ -70,7 +70,7 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Page<UserReadProjection> findAllForRead(Pageable pageable);
 
     @Query("""
-            select u.username as username, u.role as role, t.name as tenantName
+            select u.id as id, u.username as username, u.role as role, t.name as tenantName
             from User u
             join Tenant t on t.id = u.tenantId
             where u.tenantId = :tenantId

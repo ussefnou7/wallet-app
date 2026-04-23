@@ -10,14 +10,14 @@ public class WalletConsumptionResetScheduler {
 
     private final WalletConsumptionService walletConsumptionService;
 
-    // Runs after midnight to clear the previous day's consumption window.
-    @Scheduled(cron = "0 0 0 * * *")
+    // Temporary test trigger: runs once at 2026-04-16 19:53 local time.
+    @Scheduled(cron = "0 53 19 16 4 *")
     public void resetDailyConsumption() {
         walletConsumptionService.resetDailyConsumption();
     }
 
-    // Runs on the first day of each month to clear the previous month's consumption window.
-    @Scheduled(cron = "0 0 0 1 * *")
+    // Temporary test trigger: runs once at 2026-04-16 19:53 local time.
+    @Scheduled(cron = "0 53 19 16 4 *")
     public void resetMonthlyConsumption() {
         walletConsumptionService.resetMonthlyConsumption();
     }

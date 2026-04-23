@@ -11,4 +11,8 @@ public interface BranchReadProjection {
     boolean getActive();
 
     String getTenantName();
+
+    Long getUserCount();
+
+    Long getWalletCount();
 }

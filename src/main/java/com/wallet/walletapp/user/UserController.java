@@ -1,8 +1,10 @@
 package com.wallet.walletapp.user;
 
+import com.wallet.walletapp.user.dto.AssignBranchRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -36,6 +38,21 @@ public class UserController {
             @PathVariable UUID id,
             @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(id, request));
+    }
+
+    @PutMapping("/{userId}/assign-branch")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
+    public ResponseEntity<UserResponse> assignBranch(
+            @PathVariable UUID userId,
+            @Valid @RequestBody AssignBranchRequest request) {
+        return ResponseEntity.ok(userService.assignUserToBranch(userId, request));
+    }
+
+    @DeleteMapping("/{userId}/branch")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
+    public ResponseEntity<Void> unassignBranch(@PathVariable UUID userId) {
+        userService.unassignUserFromBranch(userId);
+        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")

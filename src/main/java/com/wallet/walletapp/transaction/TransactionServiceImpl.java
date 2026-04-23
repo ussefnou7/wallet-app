@@ -160,12 +160,16 @@ public class TransactionServiceImpl implements TransactionService {
 
     private void applyBalanceUpdate(Wallet wallet, Transaction transaction) {
         if (transaction.getType() == TransactionType.CREDIT) {
-            wallet.setBalance(wallet.getBalance().add(transaction.getAmount()));
-            if(transaction.isCash())
-                wallet.setCashProfit(wallet.getCashProfit().add(transaction.getAmount()));
-            else
-                wallet.setWalletProfit(wallet.getWalletProfit().add(transaction.getAmount()));
-        } else
+            BigDecimal balance = wallet.getBalance().add(transaction.getAmount());
+            if(transaction.isCash()) {
+                wallet.setCashProfit(wallet.getCashProfit().add(transaction.getPercent()));
+                balance = balance.add(transaction.getPercent());
+            } else
+                wallet.setWalletProfit(wallet.getWalletProfit().add(transaction.getPercent()));
+            wallet.setBalance(balance);
+        } else {
             wallet.setBalance(wallet.getBalance().subtract(transaction.getAmount()));
+            wallet.setWalletProfit(wallet.getWalletProfit().add(transaction.getPercent()));
+        }
     }
 }

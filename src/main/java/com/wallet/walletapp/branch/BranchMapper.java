@@ -20,6 +20,8 @@ public class BranchMapper {
         response.setActive(projection.getActive());
         response.setName(projection.getName());
         response.setTenantName(projection.getTenantName());
+        response.setUserCount(projection.getUserCount());
+        response.setWalletCount(projection.getWalletCount());
         return response;
     }
 

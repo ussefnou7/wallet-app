@@ -1,8 +1,16 @@
 package com.wallet.walletapp.user;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.branch.Branch;
+import com.wallet.walletapp.branch.BranchRepository;
+import com.wallet.walletapp.branch.BranchUser;
+import com.wallet.walletapp.branch.BranchUserRepository;
+import com.wallet.walletapp.exception.BusinessValidationException;
+import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
+import com.wallet.walletapp.user.dto.AssignBranchRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
@@ -13,8 +21,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -25,6 +35,8 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final TenantRepository tenantRepository;
+    private final BranchRepository branchRepository;
+    private final BranchUserRepository branchUserRepository;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final SubscriptionAccessService subscriptionAccessService;
@@ -112,6 +124,61 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("User not found after update")));
     }
 
+    @Override
+    @Transactional
+    public UserResponse assignUserToBranch(UUID userId, AssignBranchRequest request) {
+        if (request == null || request.getBranchId() == null) {
+            throw new IllegalArgumentException("Branch id is required");
+        }
+
+        UserPrincipal currentUser = currentUser();
+        validateCanManageBranchAssignments(currentUser);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        validateCanManageTenant(currentUser, user.getTenantId());
+        validateBranchAssignableUser(user);
+
+        Branch branch = branchRepository.findById(request.getBranchId())
+                .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+        validateSameTenant(user, branch);
+
+        List<BranchUser> assignments = branchUserRepository.findAllByUserIdAndTenantId(user.getId(), user.getTenantId());
+        if (!assignments.isEmpty()) {
+            boolean alreadyAssignedToRequestedBranch = assignments.size() == 1
+                    && branch.getId().equals(assignments.get(0).getBranchId());
+            if (alreadyAssignedToRequestedBranch) {
+                return findUserResponse(user.getId());
+            }
+            throw new BusinessValidationException("User already assigned to a branch");
+        }
+
+        BranchUser assignment = new BranchUser();
+        assignment.setTenantId(user.getTenantId());
+        assignment.setUserId(user.getId());
+        assignment.setBranchId(branch.getId());
+
+        branchUserRepository.save(assignment);
+        log.info("User {} assigned to branch {}", user.getId(), branch.getId());
+
+        return findUserResponse(user.getId());
+    }
+
+    @Override
+    @Transactional
+    public void unassignUserFromBranch(UUID userId) {
+        UserPrincipal currentUser = currentUser();
+        validateCanManageBranchAssignments(currentUser);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        validateCanManageTenant(currentUser, user.getTenantId());
+        validateBranchAssignableUser(user);
+
+        branchUserRepository.deleteAllByUserIdAndTenantId(user.getId(), user.getTenantId());
+        log.info("Branch assignment removed for user {}", user.getId());
+    }
+
     public UserResponse createOwner(CreateUserRequest request) {
 
         UserPrincipal currentUser = currentUser();
@@ -189,6 +256,39 @@ public class UserServiceImpl implements UserService {
 
     private UserPrincipal currentUser() {
         return (UserPrincipal) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    }
+
+    private UserResponse findUserResponse(UUID userId) {
+        return userMapper.toResponse(userRepository.findReadById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found")));
+    }
+
+    private void validateCanManageBranchAssignments(UserPrincipal currentUser) {
+        if (currentUser.getRole() != Role.OWNER && currentUser.getRole() != Role.SYSTEM_ADMIN) {
+            throw new UnauthorizedException("Not authorized");
+        }
+    }
+
+    private void validateCanManageTenant(UserPrincipal currentUser, UUID tenantId) {
+        if (currentUser.getRole() == Role.SYSTEM_ADMIN) {
+            return;
+        }
+        if (currentUser.getRole() == Role.OWNER && Objects.equals(currentUser.getTenantId(), tenantId)) {
+            return;
+        }
+        throw new UnauthorizedException("Not authorized");
+    }
+
+    private void validateSameTenant(User user, Branch branch) {
+        if (!Objects.equals(user.getTenantId(), branch.getTenantId())) {
+            throw new BusinessValidationException("User and branch must belong to the same tenant");
+        }
+    }
+
+    private void validateBranchAssignableUser(User user) {
+        if (user.getRole() != Role.USER) {
+            throw new BusinessValidationException("Only USER role can be assigned to a branch");
+        }
     }
 
     private Pageable buildPageable(Integer page, Integer size) {

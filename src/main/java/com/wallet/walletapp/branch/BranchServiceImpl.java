@@ -7,7 +7,6 @@ import com.wallet.walletapp.branch.dto.BranchResponse;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.user.Role;
-import com.wallet.walletapp.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -27,8 +26,6 @@ public class BranchServiceImpl implements BranchService {
 
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
-    private final BranchUserRepository branchUserRepository;
-    private final UserRepository userRepository;
     private final SubscriptionAccessService subscriptionAccessService;
 
 
@@ -85,40 +82,6 @@ public class BranchServiceImpl implements BranchService {
     @Transactional
     public void deleteBranch(UUID id) {
         branchRepository.deleteById(id);
-    }
-    public void assignUserToBranch( UUID tenantId, UUID userId, UUID branchId) {
-
-        var user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        var branch = branchRepository.findById(branchId)
-                .orElseThrow(() -> new RuntimeException("Branch not found"));
-
-        // 🔐 Tenant isolation
-        if (!user.getTenantId().equals(tenantId) ||
-                !branch.getTenantId().equals(tenantId)) {
-            throw new RuntimeException("Cross-tenant access denied");
-        }
-
-        // ⚠️ Restriction for normal users
-        if (user.getRole() == Role.USER) {
-            boolean alreadyAssigned = branchUserRepository.existsByUserId(userId);
-            if (alreadyAssigned) {
-                throw new RuntimeException("User already assigned to a branch");
-            }
-        }
-
-        // Prevent duplicates
-        if (branchUserRepository.existsByUserIdAndBranchId(userId, branchId)) {
-            throw new RuntimeException("Already assigned");
-        }
-
-        BranchUser bu = new BranchUser();
-        bu.setUserId(userId);
-        bu.setBranchId(branchId);
-        bu.setTenantId(tenantId);
-
-        branchUserRepository.save(bu);
     }
 
     private UserPrincipal currentUser() {
