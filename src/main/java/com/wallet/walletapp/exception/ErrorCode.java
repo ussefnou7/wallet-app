@@ -17,9 +17,15 @@ public enum ErrorCode {
     WALLET_NOT_FOUND("WALLET_NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND),
     BRANCH_NOT_FOUND("BRANCH_NOT_FOUND", "Branch not found", HttpStatus.NOT_FOUND),
     TRANSACTION_NOT_FOUND("TRANSACTION_NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND),
+    SUPPORT_TICKET_NOT_FOUND("SUPPORT_TICKET_NOT_FOUND", "Support ticket not found", HttpStatus.NOT_FOUND),
+    RENEWAL_REQUEST_NOT_FOUND("RENEWAL_REQUEST_NOT_FOUND", "Renewal request not found", HttpStatus.NOT_FOUND),
     DUPLICATED_TRANSACTION("DUPLICATED_TRANSACTION", "This transaction was already submitted", HttpStatus.CONFLICT),
     WALLET_LIMIT_EXCEEDED("WALLET_LIMIT_EXCEEDED", "Wallet limit exceeded for the current plan", HttpStatus.CONFLICT),
     INSUFFICIENT_BALANCE("INSUFFICIENT_BALANCE", "Insufficient balance", HttpStatus.CONFLICT),
+    INVALID_RENEWAL_REQUEST_STATUS("INVALID_RENEWAL_REQUEST_STATUS", "This renewal request has already been reviewed", HttpStatus.CONFLICT),
+    UNSUPPORTED_FILE_TYPE("UNSUPPORTED_FILE_TYPE", "Unsupported file type", HttpStatus.BAD_REQUEST),
+    FILE_TOO_LARGE("FILE_TOO_LARGE", "Uploaded file exceeds the allowed size", HttpStatus.BAD_REQUEST),
+    FILE_UPLOAD_FAILED("FILE_UPLOAD_FAILED", "File upload failed", HttpStatus.BAD_GATEWAY),
     DATA_CONFLICT("DATA_CONFLICT", "The request conflicts with existing data", HttpStatus.CONFLICT),
     INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
 
