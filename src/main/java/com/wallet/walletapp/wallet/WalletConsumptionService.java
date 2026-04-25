@@ -1,5 +1,7 @@
 package com.wallet.walletapp.wallet;
 
+import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.transaction.Transaction;
 import com.wallet.walletapp.transaction.TransactionType;
 import lombok.RequiredArgsConstructor;
@@ -42,14 +44,14 @@ public class WalletConsumptionService {
     @Transactional(readOnly = true)
     public WalletConsumption getByWallet(Wallet wallet) {
         return walletConsumptionRepository.findByWalletId(wallet.getId())
-                .orElseThrow(() -> new IllegalStateException("Wallet consumption not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ENTITY_NOT_FOUND, "Wallet consumption not found"));
     }
 
     // Step 2: update daily/monthly counters synchronously when a transaction is created.
     @Transactional
     public void applyTransaction(Wallet wallet, Transaction transaction) {
         WalletConsumption consumption = walletConsumptionRepository.findByWalletId(wallet.getId())
-                .orElseThrow(() -> new IllegalStateException("Wallet consumption not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ENTITY_NOT_FOUND, "Wallet consumption not found"));
 
         if (transaction.getType() == TransactionType.DEBIT) {
             if (LocalDate.now().equals(transaction.getOccurredAt().toLocalDate())) {

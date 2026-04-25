@@ -1,6 +1,8 @@
 package com.wallet.walletapp.tenant;
 
+import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.tenant.dto.CreateTenantRequest;
 import com.wallet.walletapp.tenant.dto.TenantResponse;
 import com.wallet.walletapp.tenant.dto.UpdateTenantRequest;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -82,12 +85,12 @@ public class TenantServiceImpl implements TenantService {
 
     private Tenant findTenantById(UUID id) {
         return tenantRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.TENANT_NOT_FOUND, "Tenant not found"));
     }
 
     private void validateNameAvailability(String name) {
         if (tenantRepository.existsByNameIgnoreCase(name)) {
-            throw new IllegalArgumentException("Tenant name already exists");
+            throw new BusinessValidationException(ErrorCode.DATA_CONFLICT, "Tenant name already exists");
         }
     }
 
@@ -98,7 +101,11 @@ public class TenantServiceImpl implements TenantService {
         int resolvedPage = page != null ? page : 0;
         int resolvedSize = size != null ? size : 20;
         if (resolvedPage < 0 || resolvedSize < 1) {
-            throw new IllegalArgumentException("Invalid pagination parameters");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Invalid pagination parameters",
+                    Map.of("page", resolvedPage, "size", resolvedSize)
+            );
         }
         return PageRequest.of(resolvedPage, resolvedSize);
     }

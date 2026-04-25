@@ -1,6 +1,7 @@
 package com.wallet.walletapp.plan;
 
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.plan.dto.AssignTenantSubscriptionRequest;
 import com.wallet.walletapp.plan.dto.TenantSubscriptionResponse;
 import com.wallet.walletapp.tenant.TenantRepository;
@@ -24,7 +25,7 @@ public class TenantSubscriptionService {
     @Transactional
     public TenantSubscriptionResponse assignCurrentSubscription(AssignTenantSubscriptionRequest request) {
         tenantRepository.findById(request.getTenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Tenant not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.TENANT_NOT_FOUND, "Tenant not found"));
         Plan plan = planService.getPlanEntity(request.getPlanId());
 
         TenantSubscription subscription = tenantSubscriptionRepository.findByTenantId(request.getTenantId())
@@ -50,6 +51,6 @@ public class TenantSubscriptionService {
     @Transactional(readOnly = true)
     public TenantSubscription getCurrentSubscriptionEntity(UUID tenantId) {
         return tenantSubscriptionRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Current tenant subscription not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ENTITY_NOT_FOUND, "Current tenant subscription not found"));
     }
 }

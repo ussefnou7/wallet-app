@@ -1,6 +1,8 @@
 package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.exception.BusinessValidationException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
 import com.wallet.walletapp.transaction.TransactionRepository;
@@ -18,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -48,7 +51,7 @@ public class TransactionDetailsReportServiceImpl implements TransactionDetailsRe
             List<UUID> assignedWalletIds = userWalletAccessService.getAccessibleWalletIds(user);
 
             if (walletId != null && !assignedWalletIds.contains(walletId)) {
-                throw new UnauthorizedException("Access denied to wallet");
+                throw new UnauthorizedException(ErrorCode.FORBIDDEN, "Access denied to wallet", Map.of("walletId", walletId));
             }
 
             if (assignedWalletIds.isEmpty()) {
@@ -86,7 +89,11 @@ public class TransactionDetailsReportServiceImpl implements TransactionDetailsRe
 
     private Pageable buildPageable(int page, int size) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
-            throw new IllegalArgumentException("Invalid pagination parameters");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Invalid pagination parameters",
+                    Map.of("page", page, "size", size)
+            );
         }
         return PageRequest.of(page, size);
     }

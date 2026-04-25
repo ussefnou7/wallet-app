@@ -2,6 +2,7 @@ package com.wallet.walletapp.reporting;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.BalanceReportResponse;
 import com.wallet.walletapp.reporting.dto.ProfitReportResponse;
@@ -34,7 +35,7 @@ public class ReportServiceImpl implements ReportService {
         UUID tenantId = user.getTenantId();
 
         Wallet wallet = walletRepository.findByIdAndTenantId(walletId, tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
 
         if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
             throw new UnauthorizedException("Access denied to wallet");

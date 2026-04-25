@@ -1,6 +1,8 @@
 package com.wallet.walletapp.plan;
 
 import com.wallet.walletapp.branch.BranchRepository;
+import com.wallet.walletapp.exception.BusinessException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.user.UserRepository;
 import com.wallet.walletapp.wallet.WalletRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,10 +28,10 @@ public class SubscriptionAccessService {
         Plan plan = planService.getPlanEntity(subscription.getPlanId());
 
         if (!plan.isActive()) {
-            throw new IllegalStateException("Current plan is inactive");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Current plan is inactive");
         }
         if (subscription.getExpireDate().isBefore(LocalDate.now())) {
-            throw new IllegalStateException("Tenant subscription has expired");
+            throw new BusinessException(ErrorCode.FORBIDDEN, "Tenant subscription has expired");
         }
     }
 
@@ -37,7 +39,7 @@ public class SubscriptionAccessService {
     public void validateCreateUserLimit(UUID tenantId) {
         Plan plan = getCurrentPlan(tenantId);
         if (userRepository.countByTenantId(tenantId) >= plan.getMaxUsers()) {
-            throw new IllegalStateException("User limit reached for current plan");
+            throw new BusinessException(ErrorCode.DATA_CONFLICT, "User limit reached for current plan");
         }
     }
 
@@ -45,7 +47,7 @@ public class SubscriptionAccessService {
     public void validateCreateWalletLimit(UUID tenantId) {
         Plan plan = getCurrentPlan(tenantId);
         if (walletRepository.countByTenantId(tenantId) >= plan.getMaxWallets()) {
-            throw new IllegalStateException("Wallet limit reached for current plan");
+            throw new BusinessException(ErrorCode.WALLET_LIMIT_EXCEEDED);
         }
     }
 
@@ -53,7 +55,7 @@ public class SubscriptionAccessService {
     public void validateCreateBranchLimit(UUID tenantId) {
         Plan plan = getCurrentPlan(tenantId);
         if (branchRepository.countByTenantId(tenantId) >= plan.getMaxBranches()) {
-            throw new IllegalStateException("Branch limit reached for current plan");
+            throw new BusinessException(ErrorCode.DATA_CONFLICT, "Branch limit reached for current plan");
         }
     }
 

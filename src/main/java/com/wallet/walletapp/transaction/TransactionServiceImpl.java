@@ -2,7 +2,10 @@ package com.wallet.walletapp.transaction;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.common.TenantContext;
+import com.wallet.walletapp.exception.BusinessException;
+import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
 import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
@@ -15,7 +18,6 @@ import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -44,39 +47,33 @@ public class TransactionServiceImpl implements TransactionService {
         UUID tenantId = resolveTenantId(user);
 
         Wallet wallet = walletRepository.findByIdAndTenantId(request.getWalletId(), tenantId)
-                .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
 
 
         if (!wallet.isActive()) {
-            throw new IllegalStateException("Wallet is inactive");
+            throw new BusinessException(ErrorCode.BAD_REQUEST, "Wallet is inactive");
         }
 
         String externalTransactionId = normalizeExternalTransactionId(request.getExternalTransactionId());
+        if (transactionRepository.findByTenantIdAndExternalTransactionId(tenantId, externalTransactionId).isPresent()) {
+            throw new BusinessException(ErrorCode.DUPLICATED_TRANSACTION);
+        }
         LocalDateTime occurredAt = resolveOccurredAt(request);
 
         Transaction transaction = buildTransaction(request, tenantId, externalTransactionId, occurredAt);
         transaction.setTenantId(tenantId);
         transaction.setCreatedBy(user.getUserId());
 
-        try {
-            Transaction saved = transactionRepository.saveAndFlush(transaction);
+        Transaction saved = transactionRepository.saveAndFlush(transaction);
 
-            applyBalanceUpdate(wallet, saved);
-            walletRepository.save(wallet);
-            walletConsumptionService.applyTransaction(wallet, saved);
+        applyBalanceUpdate(wallet, saved);
+        walletRepository.save(wallet);
+        walletConsumptionService.applyTransaction(wallet, saved);
 
-            log.info("Transaction {} ({}) of {} created on wallet {}",
-                    saved.getId(), saved.getType(), saved.getAmount(), wallet.getId());
+        log.info("Transaction {} ({}) of {} created on wallet {}",
+                saved.getId(), saved.getType(), saved.getAmount(), wallet.getId());
 
-            return transactionMapper.toResponse(saved);
-
-        } catch (DataIntegrityViolationException ex) {
-            Transaction existing = transactionRepository
-                    .findByTenantIdAndExternalTransactionId(tenantId, externalTransactionId)
-                    .orElseThrow(() -> ex);
-
-            return transactionMapper.toResponse(existing);
-        }
+        return transactionMapper.toResponse(saved);
     }
 
     @Override
@@ -102,15 +99,15 @@ public class TransactionServiceImpl implements TransactionService {
     public TransactionReadResponse getTransactionById(UUID id) {
         UserPrincipal user = currentUser();
         TransactionReadProjection transaction = transactionRepository.findReadByIdAndTenantId(id, user.getTenantId())
-                .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.TRANSACTION_NOT_FOUND, "Transaction not found"));
 
-        validateWalletAccess(user, transaction.getWalletId(), user.getTenantId());
+        validateWalletAccess(user, transaction.getWalletId());
         return transactionMapper.toReadResponse(transaction);
     }
 
-    private void validateWalletAccess(UserPrincipal user, UUID walletId, UUID tenantId) {
+    private void validateWalletAccess(UserPrincipal user, UUID walletId) {
         if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
-            throw new UnauthorizedException("Access denied to wallet");
+            throw new UnauthorizedException(ErrorCode.FORBIDDEN, "Access denied to wallet", Map.of("walletId", walletId));
         }
     }
 
@@ -125,7 +122,11 @@ public class TransactionServiceImpl implements TransactionService {
 
     private String normalizeExternalTransactionId(String externalTransactionId) {
         if (externalTransactionId == null || externalTransactionId.isBlank()) {
-            throw new IllegalArgumentException("External transaction id is required");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "External transaction id is required",
+                    Map.of("externalTransactionId", "must not be blank")
+            );
         }
         return externalTransactionId.trim();
     }

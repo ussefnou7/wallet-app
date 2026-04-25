@@ -7,6 +7,7 @@ import com.wallet.walletapp.branch.BranchUser;
 import com.wallet.walletapp.branch.BranchUserRepository;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -89,19 +91,20 @@ public class UserServiceImpl implements UserService {
 
         UserPrincipal currentUser = currentUser();
 
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
 
         // Authorization: system admin can update anyone
         if (currentUser.getRole() != Role.SYSTEM_ADMIN) {
             if (currentUser.getRole() == Role.OWNER) {
                 // Owner can only manage users within their tenant
                 if (!currentUser.getTenantId().equals(user.getTenantId())) {
-                    throw new RuntimeException("Not authorized");
+                    throw new UnauthorizedException("Not authorized");
                 }
             } else {
                 // Regular users can only update themselves
                 if (!currentUser.getUserId().equals(user.getId())) {
-                    throw new RuntimeException("Not authorized");
+                    throw new UnauthorizedException("Not authorized");
                 }
             }
         }
@@ -121,26 +124,30 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
         return userMapper.toResponse(userRepository.findReadById(user.getId())
-                .orElseThrow(() -> new RuntimeException("User not found after update")));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found after update")));
     }
 
     @Override
     @Transactional
     public UserResponse assignUserToBranch(UUID userId, AssignBranchRequest request) {
         if (request == null || request.getBranchId() == null) {
-            throw new IllegalArgumentException("Branch id is required");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Branch id is required",
+                    Map.of("branchId", "must not be null")
+            );
         }
 
         UserPrincipal currentUser = currentUser();
         validateCanManageBranchAssignments(currentUser);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
         validateCanManageTenant(currentUser, user.getTenantId());
         validateBranchAssignableUser(user);
 
         Branch branch = branchRepository.findById(request.getBranchId())
-                .orElseThrow(() -> new EntityNotFoundException("Branch not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.BRANCH_NOT_FOUND, "Branch not found"));
         validateSameTenant(user, branch);
 
         List<BranchUser> assignments = branchUserRepository.findAllByUserIdAndTenantId(user.getId(), user.getTenantId());
@@ -150,7 +157,7 @@ public class UserServiceImpl implements UserService {
             if (alreadyAssignedToRequestedBranch) {
                 return findUserResponse(user.getId());
             }
-            throw new BusinessValidationException("User already assigned to a branch");
+            throw new BusinessValidationException(ErrorCode.DATA_CONFLICT, "User already assigned to a branch");
         }
 
         BranchUser assignment = new BranchUser();
@@ -171,7 +178,7 @@ public class UserServiceImpl implements UserService {
         validateCanManageBranchAssignments(currentUser);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
         validateCanManageTenant(currentUser, user.getTenantId());
         validateBranchAssignableUser(user);
 
@@ -185,16 +192,21 @@ public class UserServiceImpl implements UserService {
 
         // 🔒 Only Admin
         if (currentUser.getRole() != Role.SYSTEM_ADMIN) {
-            throw new RuntimeException("Only admin can create owners");
+            throw new UnauthorizedException("Only admin can create owners");
         }
 
         // ✅ Must provide tenantId
         if (request.getTenantId() == null) {
-            throw new RuntimeException("TenantId is required");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "TenantId is required",
+                    Map.of("tenantId", "must not be null")
+            );
         }
 
         // ✅ Validate tenant exists
-        tenantRepository.findById(request.getTenantId()).orElseThrow(() -> new RuntimeException("Tenant not found"));
+        tenantRepository.findById(request.getTenantId())
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.TENANT_NOT_FOUND, "Tenant not found"));
         subscriptionAccessService.validateValidSubscription(request.getTenantId());
         subscriptionAccessService.validateCreateUserLimit(request.getTenantId());
 
@@ -205,7 +217,7 @@ public class UserServiceImpl implements UserService {
         owner = userRepository.save(owner);
         log.info("Owner '{}' created for tenant {}", owner.getUsername(), owner.getTenantId());
         return userMapper.toResponse(userRepository.findReadById(owner.getId())
-                .orElseThrow(() -> new RuntimeException("Owner not found after create")));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "Owner not found after create")));
     }
 
     public UserResponse createUser(CreateUserRequest request) {
@@ -214,15 +226,8 @@ public class UserServiceImpl implements UserService {
 
         // 🔒 Only Owner
         if (currentUser.getRole() != Role.OWNER) {
-            throw new RuntimeException("Only owner can create users");
+            throw new UnauthorizedException("Only owner can create users");
         }
-
-        // ❌ Owner cannot pass tenantId
-        /*
-        if (request.getTenantId() != null) {
-            throw new RuntimeException("TenantId should not be provided");
-        }
-         */
 
         subscriptionAccessService.validateValidSubscription(currentUser.getTenantId());
         subscriptionAccessService.validateCreateUserLimit(currentUser.getTenantId());
@@ -233,7 +238,7 @@ public class UserServiceImpl implements UserService {
         user = userRepository.save(user);
         log.info("User '{}' created for tenant {}", user.getUsername(), user.getTenantId());
         return userMapper.toResponse(userRepository.findReadById(user.getId())
-                .orElseThrow(() -> new RuntimeException("User not found after create")));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found after create")));
 
     }
 
@@ -250,7 +255,7 @@ public class UserServiceImpl implements UserService {
 
     public void validateUser(String username) {
         if (userRepository.existsByUsername(username)) {
-            throw new IllegalArgumentException("Username already taken");
+            throw new BusinessValidationException(ErrorCode.DATA_CONFLICT, "Username already taken");
         }
     }
 
@@ -260,7 +265,7 @@ public class UserServiceImpl implements UserService {
 
     private UserResponse findUserResponse(UUID userId) {
         return userMapper.toResponse(userRepository.findReadById(userId)
-                .orElseThrow(() -> new EntityNotFoundException("User not found")));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found")));
     }
 
     private void validateCanManageBranchAssignments(UserPrincipal currentUser) {
@@ -281,13 +286,13 @@ public class UserServiceImpl implements UserService {
 
     private void validateSameTenant(User user, Branch branch) {
         if (!Objects.equals(user.getTenantId(), branch.getTenantId())) {
-            throw new BusinessValidationException("User and branch must belong to the same tenant");
+            throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "User and branch must belong to the same tenant");
         }
     }
 
     private void validateBranchAssignableUser(User user) {
         if (user.getRole() != Role.USER) {
-            throw new BusinessValidationException("Only USER role can be assigned to a branch");
+            throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "Only USER role can be assigned to a branch");
         }
     }
 
@@ -298,7 +303,11 @@ public class UserServiceImpl implements UserService {
         int resolvedPage = page != null ? page : 0;
         int resolvedSize = size != null ? size : 20;
         if (resolvedPage < 0 || resolvedSize < 1) {
-            throw new IllegalArgumentException("Invalid pagination parameters");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Invalid pagination parameters",
+                    Map.of("page", resolvedPage, "size", resolvedSize)
+            );
         }
         return PageRequest.of(resolvedPage, resolvedSize);
     }

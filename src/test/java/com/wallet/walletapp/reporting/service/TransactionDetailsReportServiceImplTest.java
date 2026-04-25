@@ -1,6 +1,7 @@
 package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
 import com.wallet.walletapp.transaction.TransactionRepository;
@@ -101,7 +102,7 @@ class TransactionDetailsReportServiceImplTest {
     void generateRejectsUnboundedPageSize() {
         authenticate(Role.OWNER);
 
-        assertThrows(IllegalArgumentException.class,
+        assertThrows(BusinessValidationException.class,
                 () -> service.generate(null, null, null, null, null, null, null, 0, 101));
         verifyNoInteractions(transactionRepository, userWalletAccessService);
     }

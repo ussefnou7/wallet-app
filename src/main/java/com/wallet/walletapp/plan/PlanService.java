@@ -1,6 +1,7 @@
 package com.wallet.walletapp.plan;
 
 import com.wallet.walletapp.exception.EntityNotFoundException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.plan.dto.CreatePlanRequest;
 import com.wallet.walletapp.plan.dto.PlanResponse;
 import com.wallet.walletapp.plan.dto.UpdatePlanRequest;
@@ -73,6 +74,6 @@ public class PlanService {
     @Transactional(readOnly = true)
     public Plan getPlanEntity(UUID id) {
         return planRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Plan not found"));
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.ENTITY_NOT_FOUND, "Plan not found"));
     }
 }

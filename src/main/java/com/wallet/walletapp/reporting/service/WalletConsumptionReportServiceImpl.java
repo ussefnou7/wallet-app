@@ -1,6 +1,7 @@
 package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.WalletConsumptionReportReadModel;
 import com.wallet.walletapp.user.Role;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -33,7 +35,7 @@ public class WalletConsumptionReportServiceImpl implements WalletConsumptionRepo
         Set<UUID> assignedWalletIds = resolveAssignedWalletIds(user);
 
         if (user.getRole() == Role.USER && walletId != null && !assignedWalletIds.contains(walletId)) {
-            throw new UnauthorizedException("Access denied to wallet");
+            throw new UnauthorizedException(ErrorCode.FORBIDDEN, "Access denied to wallet", Map.of("walletId", walletId));
         }
 
         if (user.getRole() == Role.USER && assignedWalletIds.isEmpty()) {

@@ -2,13 +2,16 @@ package com.wallet.walletapp.auth;
 
 import com.wallet.walletapp.auth.dto.AuthResponse;
 import com.wallet.walletapp.auth.dto.LoginRequest;
+import com.wallet.walletapp.exception.BusinessException;
+import com.wallet.walletapp.exception.ErrorCode;
+import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.user.User;
 import com.wallet.walletapp.user.UserRepository;
-import com.wallet.walletapp.user.UserService;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +30,15 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public AuthResponse login(LoginRequest request) {
 
-        User user = userRepository.findByUsername(request.getUsername()).orElseThrow(() -> new RuntimeException("Invalid credentials"));
+        User user = userRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid credentials");
+            throw new BadCredentialsException("Invalid username or password");
         }
 
         if (!user.isActive()) {
-            throw new RuntimeException("User inactive");
+            throw new UnauthorizedException(ErrorCode.FORBIDDEN, "User account is inactive");
         }
 
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getTenantId(), user.getRole().name());
@@ -46,7 +50,7 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public AuthResponse register(CreateUserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Username already taken");
+            throw new BusinessException(ErrorCode.DATA_CONFLICT, "Username already taken");
         }
 
         UUID tenantId = request.getTenantId() != null ? request.getTenantId() : UUID.randomUUID();

@@ -1,6 +1,7 @@
 package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.ProfitSummaryDto;
 import com.wallet.walletapp.transaction.ProfitSummaryProjection;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -41,7 +43,7 @@ public class ProfitSummaryReportServiceImpl implements ProfitSummaryReportServic
 
         if (walletId != null) {
             if (!assignedWalletIds.contains(walletId)) {
-                throw new UnauthorizedException("Access denied to wallet");
+                throw new UnauthorizedException(ErrorCode.FORBIDDEN, "Access denied to wallet", Map.of("walletId", walletId));
             }
             return toDto(transactionRepository.getProfitSummary(tenantId, walletId, fromDate, toDate));
         }

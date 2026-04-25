@@ -2,6 +2,7 @@ package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.BusinessValidationException;
+import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.TransactionSummaryDto;
 import com.wallet.walletapp.transaction.TransactionRepository;
@@ -16,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -33,7 +35,11 @@ public class TransactionSummaryReportServiceImpl implements TransactionSummaryRe
         UUID tenantId = user.getTenantId();
 
         if (user.getRole() == Role.USER && walletId == null) {
-            throw new BusinessValidationException("USER role must specify walletId");
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "USER role must specify walletId",
+                    Map.of("walletId", "must not be null")
+            );
         }
 
         if (user.getRole() == Role.USER && walletId != null) {
