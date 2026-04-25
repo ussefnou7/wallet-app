@@ -2,12 +2,11 @@ package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.reporting.dto.TransactionDetailRowDto;
-import com.wallet.walletapp.transaction.Transaction;
+import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
 import com.wallet.walletapp.transaction.TransactionRepository;
+import com.wallet.walletapp.transaction.TransactionType;
 import com.wallet.walletapp.user.Role;
-import com.wallet.walletapp.wallet.WalletUser;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +26,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -40,7 +40,7 @@ class TransactionDetailsReportServiceImplTest {
     private TransactionRepository transactionRepository;
 
     @Mock
-    private WalletUserRepository walletUserRepository;
+    private UserWalletAccessService userWalletAccessService;
 
     @InjectMocks
     private TransactionDetailsReportServiceImpl service;
@@ -57,23 +57,29 @@ class TransactionDetailsReportServiceImplTest {
         UUID assignedWalletId = UUID.randomUUID();
         UUID secondAssignedWalletId = UUID.randomUUID();
         PageRequest pageable = PageRequest.of(0, 20);
-        Transaction transaction = transaction(assignedWalletId);
+        TransactionReportReadModel transaction = transaction(assignedWalletId, "Main Wallet", "owner-user");
 
-        when(walletUserRepository.findByUserIdAndTenantId(USER_ID, TENANT_ID))
-                .thenReturn(List.of(walletUser(assignedWalletId), walletUser(secondAssignedWalletId)));
-        when(transactionRepository.findAllByFilters(
+        when(userWalletAccessService.getAccessibleWalletIds(org.mockito.ArgumentMatchers.any(UserPrincipal.class)))
+                .thenReturn(List.of(assignedWalletId, secondAssignedWalletId));
+        when(transactionRepository.findTransactionReportByTenantIdAndWalletIdIn(
                 TENANT_ID,
                 List.of(assignedWalletId, secondAssignedWalletId),
+                null,
+                null,
+                null,
+                false,
+                null,
                 null,
                 null,
                 null,
                 pageable))
                 .thenReturn(new PageImpl<>(List.of(transaction), pageable, 1));
 
-        Page<TransactionDetailRowDto> result = service.generate(null, null, null, null, 0, 20);
+        Page<TransactionReportReadModel> result = service.generate(null, null, null, null, null, null, null, 0, 20);
 
-        assertEquals(1, result.getTotalElements());
+        assertEquals(1, result.getNumberOfElements());
         assertEquals(assignedWalletId, result.getContent().getFirst().getWalletId());
+        assertEquals("Main Wallet", result.getContent().getFirst().getWalletName());
     }
 
     @Test
@@ -83,11 +89,11 @@ class TransactionDetailsReportServiceImplTest {
         UUID assignedWalletId = UUID.randomUUID();
         UUID unassignedWalletId = UUID.randomUUID();
 
-        when(walletUserRepository.findByUserIdAndTenantId(USER_ID, TENANT_ID))
-                .thenReturn(List.of(walletUser(assignedWalletId)));
+        when(userWalletAccessService.getAccessibleWalletIds(org.mockito.ArgumentMatchers.any(UserPrincipal.class)))
+                .thenReturn(List.of(assignedWalletId));
 
         assertThrows(UnauthorizedException.class,
-                () -> service.generate(unassignedWalletId, null, null, null, 0, 20));
+                () -> service.generate(unassignedWalletId, null, null, null, null, null, null, 0, 20));
         verifyNoInteractions(transactionRepository);
     }
 
@@ -96,8 +102,61 @@ class TransactionDetailsReportServiceImplTest {
         authenticate(Role.OWNER);
 
         assertThrows(IllegalArgumentException.class,
-                () -> service.generate(null, null, null, null, 0, 101));
-        verifyNoInteractions(transactionRepository, walletUserRepository);
+                () -> service.generate(null, null, null, null, null, null, null, 0, 101));
+        verifyNoInteractions(transactionRepository, userWalletAccessService);
+    }
+
+    @Test
+    void generateForOwnerPassesAllSupportedFiltersToRepository() {
+        authenticate(Role.OWNER);
+
+        UUID walletId = UUID.randomUUID();
+        UUID branchId = UUID.randomUUID();
+        UUID createdByUserId = UUID.randomUUID();
+        LocalDateTime fromDate = LocalDateTime.of(2026, 4, 1, 0, 0);
+        LocalDateTime toDate = LocalDateTime.of(2026, 4, 30, 23, 59);
+        PageRequest pageable = PageRequest.of(1, 10);
+        TransactionReportReadModel transaction = transaction(walletId, "Retail Wallet", "branch-owner");
+
+        when(transactionRepository.findTransactionReportByTenantId(
+                TENANT_ID,
+                walletId,
+                branchId,
+                TransactionType.DEBIT,
+                true,
+                createdByUserId,
+                Boolean.TRUE,
+                fromDate,
+                toDate,
+                pageable))
+                .thenReturn(new PageImpl<>(List.of(transaction), pageable, 1));
+
+        Page<TransactionReportReadModel> result = service.generate(
+                walletId,
+                branchId,
+                TransactionType.DEBIT,
+                createdByUserId,
+                Boolean.TRUE,
+                fromDate,
+                toDate,
+                1,
+                10
+        );
+
+        assertEquals(1, result.getNumberOfElements());
+        assertEquals("branch-owner", result.getContent().getFirst().getCreatedByUsername());
+        verify(transactionRepository).findTransactionReportByTenantId(
+                TENANT_ID,
+                walletId,
+                branchId,
+                TransactionType.DEBIT,
+                true,
+                createdByUserId,
+                Boolean.TRUE,
+                fromDate,
+                toDate,
+                pageable
+        );
     }
 
     private void authenticate(Role role) {
@@ -106,22 +165,23 @@ class TransactionDetailsReportServiceImplTest {
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
-    private WalletUser walletUser(UUID walletId) {
-        WalletUser walletUser = new WalletUser();
-        walletUser.setUserId(USER_ID);
-        walletUser.setWalletId(walletId);
-        walletUser.setTenantId(TENANT_ID);
-        return walletUser;
-    }
-
-    private Transaction transaction(UUID walletId) {
-        Transaction transaction = new Transaction();
-        transaction.setId(UUID.randomUUID());
-        transaction.setTenantId(TENANT_ID);
-        transaction.setWalletId(walletId);
-        transaction.setAmount(BigDecimal.TEN);
-        transaction.setOccurredAt(LocalDateTime.now());
-        transaction.setCreatedAt(LocalDateTime.now());
-        return transaction;
+    private TransactionReportReadModel transaction(UUID walletId, String walletName, String createdByUsername) {
+        return new TransactionReportReadModel(
+                UUID.randomUUID(),
+                TENANT_ID,
+                "Tenant A",
+                walletId,
+                walletName,
+                USER_ID,
+                createdByUsername,
+                BigDecimal.TEN,
+                TransactionType.CREDIT,
+                BigDecimal.ONE,
+                "0123456789",
+                Boolean.FALSE,
+                "test",
+                LocalDateTime.of(2026, 4, 24, 10, 0),
+                LocalDateTime.of(2026, 4, 24, 10, 5)
+        );
     }
 }

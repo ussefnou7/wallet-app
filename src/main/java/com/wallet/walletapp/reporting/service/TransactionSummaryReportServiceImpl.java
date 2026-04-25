@@ -5,8 +5,9 @@ import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.reporting.dto.TransactionSummaryDto;
 import com.wallet.walletapp.transaction.TransactionRepository;
+import com.wallet.walletapp.transaction.TransactionSummaryProjection;
 import com.wallet.walletapp.user.Role;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ import java.util.UUID;
 public class TransactionSummaryReportServiceImpl implements TransactionSummaryReportService {
 
     private final TransactionRepository transactionRepository;
-    private final WalletUserRepository walletUserRepository;
+    private final UserWalletAccessService userWalletAccessService;
 
     @Transactional(readOnly = true)
     public TransactionSummaryDto generate(@Nullable LocalDateTime fromDate,
@@ -36,18 +37,16 @@ public class TransactionSummaryReportServiceImpl implements TransactionSummaryRe
         }
 
         if (user.getRole() == Role.USER && walletId != null) {
-            boolean hasAccess = walletUserRepository.existsByUserIdAndWalletIdAndTenantId(
-                    user.getUserId(), walletId, tenantId);
-            if (!hasAccess) {
+            if (!userWalletAccessService.hasAccessToWallet(user, walletId)) {
                 throw new UnauthorizedException("Access denied to wallet");
             }
         }
 
-        Object[] result = transactionRepository.getSummary(tenantId, walletId, fromDate, toDate);
+        TransactionSummaryProjection result = transactionRepository.getSummary(tenantId, walletId, fromDate, toDate);
 
-        BigDecimal totalCredits = (BigDecimal) result[0];
-        BigDecimal totalDebits = (BigDecimal) result[1];
-        Long count = (Long) result[2];
+        BigDecimal totalCredits = result.getTotalCredits();
+        BigDecimal totalDebits = result.getTotalDebits();
+        Long count = result.getTransactionCount();
 
         BigDecimal netAmount = totalCredits.subtract(totalDebits);
 

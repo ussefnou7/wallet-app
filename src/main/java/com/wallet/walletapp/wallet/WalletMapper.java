@@ -41,6 +41,7 @@ public class WalletMapper {
         response.setTenantId(projection.getTenantId());
         response.setTenantName(projection.getTenantName());
         response.setBranchId(projection.getBranchId());
+        response.setBranchName(projection.getBranchName());
         response.setName(projection.getName());
         response.setNumber(projection.getNumber());
         response.setBalance(projection.getBalance());

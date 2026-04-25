@@ -10,7 +10,7 @@ import com.wallet.walletapp.transaction.TransactionType;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.Wallet;
 import com.wallet.walletapp.wallet.WalletRepository;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
-    private final WalletUserRepository walletUserRepository;
+    private final UserWalletAccessService userWalletAccessService;
 
     @Override
     @Transactional(readOnly = true)
@@ -36,12 +36,8 @@ public class ReportServiceImpl implements ReportService {
         Wallet wallet = walletRepository.findByIdAndTenantId(walletId, tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
-        if (user.getRole() == Role.USER) {
-            boolean hasAccess = walletUserRepository.existsByUserIdAndWalletIdAndTenantId(
-                    user.getUserId(), walletId, tenantId);
-            if (!hasAccess) {
-                throw new UnauthorizedException("Access denied to wallet");
-            }
+        if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
+            throw new UnauthorizedException("Access denied to wallet");
         }
 
         BigDecimal credits = transactionRepository.sumAmountByWalletAndType(tenantId, walletId, TransactionType.CREDIT);

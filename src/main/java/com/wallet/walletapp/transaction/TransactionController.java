@@ -1,6 +1,7 @@
 package com.wallet.walletapp.transaction;
 
 import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
+import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +29,7 @@ public class TransactionController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TransactionResponse>> getAllTransactions(
+    public ResponseEntity<List<TransactionReadResponse>> getAllTransactions(
             @RequestParam(required = false) UUID walletId,
             @RequestParam(required = false) TransactionType type,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
@@ -37,7 +38,7 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<TransactionResponse> getTransactionById(@PathVariable UUID id) {
+    public ResponseEntity<TransactionReadResponse> getTransactionById(@PathVariable UUID id) {
         return ResponseEntity.ok(transactionService.getTransactionById(id));
     }
 }

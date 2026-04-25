@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 public class WalletServiceImpl implements WalletService {
 
     private final WalletRepository walletRepository;
-    private final WalletUserRepository walletUserRepository;
+    private final UserWalletAccessService userWalletAccessService;
     private final WalletConsumptionService walletConsumptionService;
     private final WalletConsumptionRepository walletConsumptionRepository;
     private final WalletMapper walletMapper;
@@ -130,11 +130,8 @@ public class WalletServiceImpl implements WalletService {
         UserPrincipal user = currentUser();
         Wallet wallet = walletRepository.findByIdAndTenantId(walletId, user.getTenantId()).orElseThrow(() -> new EntityNotFoundException("Wallet not found"));
 
-        if (user.getRole() == Role.USER) {
-            boolean hasAccess = walletUserRepository.existsByUserIdAndWalletIdAndTenantId(user.getUserId(), walletId, user.getTenantId());
-            if (!hasAccess) {
-                throw new UnauthorizedException("Access denied to wallet");
-            }
+        if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
+            throw new UnauthorizedException("Access denied to wallet");
         }
         return wallet;
     }

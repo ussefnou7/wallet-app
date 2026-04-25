@@ -2,12 +2,10 @@ package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.UnauthorizedException;
+import com.wallet.walletapp.reporting.dto.WalletConsumptionReportReadModel;
 import com.wallet.walletapp.user.Role;
-import com.wallet.walletapp.wallet.Wallet;
-import com.wallet.walletapp.wallet.WalletConsumption;
-import com.wallet.walletapp.wallet.WalletRepository;
-import com.wallet.walletapp.wallet.WalletUser;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.WalletConsumptionRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,12 +16,15 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,10 +34,10 @@ class WalletConsumptionReportServiceImplTest {
     private static final UUID USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000010");
 
     @Mock
-    private WalletRepository walletRepository;
+    private WalletConsumptionRepository walletConsumptionRepository;
 
     @Mock
-    private WalletUserRepository walletUserRepository;
+    private UserWalletAccessService userWalletAccessService;
 
     @InjectMocks
     private WalletConsumptionReportServiceImpl service;
@@ -51,23 +52,35 @@ class WalletConsumptionReportServiceImplTest {
         authenticate(Role.USER);
 
         UUID assignedWalletId = UUID.randomUUID();
-        UUID unassignedWalletId = UUID.randomUUID();
-        Wallet assignedWallet = wallet(assignedWalletId, BigDecimal.ZERO, BigDecimal.ZERO, consumption(null, null));
-        Wallet unassignedWallet = wallet(unassignedWalletId, BigDecimal.TEN, BigDecimal.TEN, consumption(BigDecimal.ONE, BigDecimal.ONE));
+        UUID branchId = UUID.randomUUID();
+        WalletConsumptionReportReadModel assignedWallet = readModel(
+                assignedWalletId,
+                branchId,
+                null,
+                null,
+                BigDecimal.ZERO,
+                BigDecimal.ZERO
+        );
 
-        when(walletUserRepository.findByUserIdAndTenantId(USER_ID, TENANT_ID))
-                .thenReturn(List.of(walletUser(assignedWalletId)));
-        when(walletRepository.findAllByTenantIdOrderByIdAsc(TENANT_ID))
-                .thenReturn(List.of(assignedWallet, unassignedWallet));
+        when(userWalletAccessService.getAccessibleWalletIds(org.mockito.ArgumentMatchers.any(UserPrincipal.class)))
+                .thenReturn(List.of(assignedWalletId));
+        when(walletConsumptionRepository.findReportByTenantIdAndWalletIdIn(
+                TENANT_ID,
+                Set.of(assignedWalletId),
+                null,
+                null,
+                null))
+                .thenReturn(List.of(assignedWallet));
 
         var result = service.generate(null, null, null);
 
         assertEquals(1, result.size());
         assertEquals(assignedWalletId, result.getFirst().getWalletId());
-        assertEquals(BigDecimal.ZERO, result.getFirst().getDailyConsumed());
-        assertEquals(BigDecimal.ZERO, result.getFirst().getMonthlyConsumed());
-        assertEquals(BigDecimal.ZERO, result.getFirst().getDailyUsagePercent());
-        assertEquals(BigDecimal.ZERO, result.getFirst().getMonthlyUsagePercent());
+        assertEquals("Branch A", result.getFirst().getBranchName());
+        assertEquals(BigDecimal.ZERO, result.getFirst().getDailySpent());
+        assertEquals(BigDecimal.ZERO, result.getFirst().getMonthlySpent());
+        assertEquals(BigDecimal.ZERO, result.getFirst().getDailyPercent());
+        assertEquals(BigDecimal.ZERO, result.getFirst().getMonthlyPercent());
         assertFalse(result.getFirst().getNearDailyLimit());
         assertFalse(result.getFirst().getNearMonthlyLimit());
     }
@@ -79,11 +92,12 @@ class WalletConsumptionReportServiceImplTest {
         UUID assignedWalletId = UUID.randomUUID();
         UUID unassignedWalletId = UUID.randomUUID();
 
-        when(walletUserRepository.findByUserIdAndTenantId(USER_ID, TENANT_ID))
-                .thenReturn(List.of(walletUser(assignedWalletId)));
+        when(userWalletAccessService.getAccessibleWalletIds(org.mockito.ArgumentMatchers.any(UserPrincipal.class)))
+                .thenReturn(List.of(assignedWalletId));
 
         assertThrows(UnauthorizedException.class,
                 () -> service.generate(unassignedWalletId, null, null));
+        verifyNoInteractions(walletConsumptionRepository);
     }
 
     private void authenticate(Role role) {
@@ -92,31 +106,26 @@ class WalletConsumptionReportServiceImplTest {
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
     }
 
-    private Wallet wallet(UUID walletId, BigDecimal dailyLimit, BigDecimal monthlyLimit, WalletConsumption consumption) {
-        Wallet wallet = new Wallet();
-        wallet.setId(walletId);
-        wallet.setTenantId(TENANT_ID);
-        wallet.setName("wallet-" + walletId);
-        wallet.setBranchId(UUID.randomUUID());
-        wallet.setActive(true);
-        wallet.setDailyLimit(dailyLimit);
-        wallet.setMonthlyLimit(monthlyLimit);
-        wallet.setConsumption(consumption);
-        return wallet;
-    }
-
-    private WalletConsumption consumption(BigDecimal dailyConsumed, BigDecimal monthlyConsumed) {
-        WalletConsumption consumption = new WalletConsumption();
-        consumption.setDailyConsumed(dailyConsumed);
-        consumption.setMonthlyConsumed(monthlyConsumed);
-        return consumption;
-    }
-
-    private WalletUser walletUser(UUID walletId) {
-        WalletUser walletUser = new WalletUser();
-        walletUser.setUserId(USER_ID);
-        walletUser.setWalletId(walletId);
-        walletUser.setTenantId(TENANT_ID);
-        return walletUser;
+    private WalletConsumptionReportReadModel readModel(UUID walletId,
+                                                       UUID branchId,
+                                                       BigDecimal dailySpent,
+                                                       BigDecimal monthlySpent,
+                                                       BigDecimal dailyLimit,
+                                                       BigDecimal monthlyLimit) {
+        return new WalletConsumptionReportReadModel(
+                walletId,
+                TENANT_ID,
+                "Tenant A",
+                branchId,
+                "Branch A",
+                walletId,
+                "wallet-" + walletId,
+                dailySpent,
+                monthlySpent,
+                dailyLimit,
+                monthlyLimit,
+                LocalDateTime.of(2026, 4, 24, 9, 0),
+                Boolean.TRUE
+        );
     }
 }

@@ -1,6 +1,7 @@
 package com.wallet.walletapp.transaction;
 
 import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
+import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,26 @@ public class TransactionMapper {
         response.setOccurredAt(transaction.getOccurredAt());
         response.setCreatedAt(transaction.getCreatedAt());
         response.setUpdatedAt(transaction.getUpdatedAt());
+        return response;
+    }
+
+    public TransactionReadResponse toReadResponse(TransactionReadProjection projection) {
+        TransactionReadResponse response = new TransactionReadResponse();
+        response.setId(projection.getId());
+        response.setTenantId(projection.getTenantId());
+        response.setWalletId(projection.getWalletId());
+        response.setWalletName(projection.getWalletName());
+        response.setExternalTransactionId(projection.getExternalTransactionId());
+        response.setAmount(projection.getAmount());
+        response.setType(projection.getType());
+        response.setPercent(projection.getPercent());
+        response.setPhoneNumber(projection.getPhoneNumber());
+        response.setCash(Boolean.TRUE.equals(projection.getCash()));
+        response.setDescription(projection.getDescription());
+        response.setOccurredAt(projection.getOccurredAt());
+        response.setCreatedAt(projection.getCreatedAt());
+        response.setUpdatedAt(projection.getUpdatedAt());
+        response.setCreatedByUsername(projection.getCreatedByUsername());
         return response;
     }
 

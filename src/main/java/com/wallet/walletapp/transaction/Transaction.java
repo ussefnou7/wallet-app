@@ -41,6 +41,9 @@ public class Transaction extends TenantAwareEntity {
     @Builder.Default
     private boolean isCash = false;
 
+    @Column(name = "created_by")
+    private UUID createdBy;
+
     @Column(length = 500)
     private String description;
 

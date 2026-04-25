@@ -13,12 +13,15 @@ import java.util.UUID;
 
 public interface WalletRepository extends JpaRepository<Wallet, UUID> {
 
+    boolean existsByIdAndTenantIdAndBranchIdIn(UUID id, UUID tenantId, List<UUID> branchIds);
+
     @Query("""
             select
                 w.id as id,
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -32,6 +35,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             order by w.tenantId, w.id
             """)
     List<WalletReadProjection> findAllForRead();
@@ -42,6 +46,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -55,6 +60,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.tenantId = :tenantId
             order by w.tenantId, w.id
             """)
@@ -75,6 +81,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -88,6 +95,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.id = :id
             """)
     Optional<WalletReadProjection> findReadById(@Param("id") UUID id);
@@ -98,6 +106,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -111,6 +120,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.id = :id and w.tenantId = :tenantId
             """)
     Optional<WalletReadProjection> findReadByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
@@ -123,6 +133,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -136,6 +147,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.tenantId = :tenantId and w.type = :type
             order by w.tenantId, w.id
             """)
@@ -147,6 +159,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -160,6 +173,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.branchId = :branchId
             order by w.tenantId, w.id
             """)
@@ -171,6 +185,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -184,6 +199,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.branchId = :branchId and w.type = :type
             order by w.tenantId, w.id
             """)
@@ -195,6 +211,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -208,6 +225,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             order by w.tenantId, w.id
             """)
     Page<WalletReadProjection> findAllForRead(Pageable pageable);
@@ -218,6 +236,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.tenantId as tenantId,
                 t.name as tenantName,
                 w.branchId as branchId,
+                b.name as branchName,
                 w.name as name,
                 w.number as number,
                 w.balance as balance,
@@ -231,10 +250,43 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.type as type
             from Wallet w
             join Tenant t on t.id = w.tenantId
+            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
             where w.tenantId = :tenantId
             order by w.tenantId, w.id
             """)
     Page<WalletReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId, Pageable pageable);
+
+    @Query("""
+            select
+                COALESCE(SUM(w.balance), 0) as totalBalance,
+                COUNT(w) as activeWallets
+            from Wallet w
+            where w.tenantId = :tenantId
+              and w.active = true
+            """)
+    DashboardWalletMetricsProjection getActiveDashboardMetricsByTenantId(@Param("tenantId") UUID tenantId);
+
+    @Query("""
+            select
+                COALESCE(SUM(w.balance), 0) as totalBalance,
+                COUNT(w) as activeWallets
+            from Wallet w
+            where w.tenantId = :tenantId
+              and w.id in :walletIds
+              and w.active = true
+            """)
+    DashboardWalletMetricsProjection getActiveDashboardMetricsByTenantIdAndWalletIdIn(@Param("tenantId") UUID tenantId,
+                                                                                       @Param("walletIds") List<UUID> walletIds);
+
+    @Query("""
+            select w.id
+            from Wallet w
+            where w.tenantId = :tenantId
+              and w.branchId in :branchIds
+            order by w.id
+            """)
+    List<UUID> findIdsByTenantIdAndBranchIdIn(@Param("tenantId") UUID tenantId,
+                                              @Param("branchIds") List<UUID> branchIds);
 
     long countByTenantId(UUID tenantId);
 }

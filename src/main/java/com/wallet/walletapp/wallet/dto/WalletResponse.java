@@ -14,6 +14,7 @@ public class WalletResponse {
     private UUID tenantId;
     private String tenantName;
     private UUID branchId;
+    private String branchName;
     private String name;
     private String number;
     private BigDecimal balance;

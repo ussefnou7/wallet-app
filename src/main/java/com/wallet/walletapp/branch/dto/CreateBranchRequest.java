@@ -9,7 +9,7 @@ import java.util.UUID;
 @Data
 public class CreateBranchRequest {
 
-    @NotNull
+
     private UUID tenantId;
 
     @NotBlank

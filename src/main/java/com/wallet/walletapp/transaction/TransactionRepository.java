@@ -1,5 +1,6 @@
 package com.wallet.walletapp.transaction;
 
+import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -21,6 +22,226 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     Optional<Transaction> findByIdAndTenantId(UUID id, UUID tenantId);
 
     Optional<Transaction> findByTenantIdAndExternalTransactionId(UUID tenantId, String externalTransactionId);
+
+    @Query("""
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.walletId = coalesce(:walletId, t.walletId)
+              and t.type = coalesce(:type, t.type)
+              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """)
+    List<TransactionReadProjection> findAllForRead(@Param("walletId") @Nullable UUID walletId,
+                                                   @Param("type") @Nullable TransactionType type,
+                                                   @Param("dateFrom") @Nullable LocalDateTime dateFrom,
+                                                   @Param("dateTo") @Nullable LocalDateTime dateTo);
+
+    @Query("""
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.tenantId = :tenantId
+              and t.walletId = coalesce(:walletId, t.walletId)
+              and t.type = coalesce(:type, t.type)
+              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """)
+    List<TransactionReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId,
+                                                             @Param("walletId") @Nullable UUID walletId,
+                                                             @Param("type") @Nullable TransactionType type,
+                                                             @Param("dateFrom") @Nullable LocalDateTime dateFrom,
+                                                             @Param("dateTo") @Nullable LocalDateTime dateTo);
+
+    @Query("""
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.id = :id and t.tenantId = :tenantId
+            """)
+    Optional<TransactionReadProjection> findReadByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
+
+    @Query(value = """
+            select new com.wallet.walletapp.reporting.dto.TransactionReportReadModel(
+                t.id,
+                t.tenantId,
+                tenant.name,
+                t.walletId,
+                w.name,
+                t.createdBy,
+                createdByUser.username,
+                t.amount,
+                t.type,
+                t.percent,
+                t.phoneNumber,
+                t.isCash,
+                t.description,
+                t.occurredAt,
+                t.createdAt
+            )
+            from Transaction t
+            join Wallet w
+                on w.id = t.walletId
+               and w.tenantId = t.tenantId
+            join Tenant tenant
+                on tenant.id = t.tenantId
+            left join User createdByUser
+                on createdByUser.id = t.createdBy
+               and createdByUser.tenantId = t.tenantId
+            where t.tenantId = :tenantId
+              and t.walletId = coalesce(:walletId, t.walletId)
+              and w.branchId = coalesce(:branchId, w.branchId)
+              and t.type = coalesce(:type, t.type)
+              and (:filterByCreatedBy = false or t.createdBy = :createdByUserId)
+              and t.isCash = coalesce(:cash, t.isCash)
+              and t.occurredAt >= coalesce(:fromDate, t.occurredAt)
+              and t.occurredAt <= coalesce(:toDate, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """,
+            countQuery = """
+                    select count(t)
+                    from Transaction t
+                    join Wallet w
+                        on w.id = t.walletId
+                       and w.tenantId = t.tenantId
+                    where t.tenantId = :tenantId
+                      and t.walletId = coalesce(:walletId, t.walletId)
+                      and w.branchId = coalesce(:branchId, w.branchId)
+                      and t.type = coalesce(:type, t.type)
+                      and (:filterByCreatedBy = false or t.createdBy = :createdByUserId)
+                      and t.isCash = coalesce(:cash, t.isCash)
+                      and t.occurredAt >= coalesce(:fromDate, t.occurredAt)
+                      and t.occurredAt <= coalesce(:toDate, t.occurredAt)
+                    """)
+    Page<TransactionReportReadModel> findTransactionReportByTenantId(@Param("tenantId") UUID tenantId,
+                                                                     @Param("walletId") @Nullable UUID walletId,
+                                                                     @Param("branchId") @Nullable UUID branchId,
+                                                                     @Param("type") @Nullable TransactionType type,
+                                                                     @Param("filterByCreatedBy") boolean filterByCreatedBy,
+                                                                     @Param("createdByUserId") @Nullable UUID createdByUserId,
+                                                                     @Param("cash") @Nullable Boolean cash,
+                                                                     @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                     @Param("toDate") @Nullable LocalDateTime toDate,
+                                                                     Pageable pageable);
+
+    @Query(value = """
+            select new com.wallet.walletapp.reporting.dto.TransactionReportReadModel(
+                t.id,
+                t.tenantId,
+                tenant.name,
+                t.walletId,
+                w.name,
+                t.createdBy,
+                createdByUser.username,
+                t.amount,
+                t.type,
+                t.percent,
+                t.phoneNumber,
+                t.isCash,
+                t.description,
+                t.occurredAt,
+                t.createdAt
+            )
+            from Transaction t
+            join Wallet w
+                on w.id = t.walletId
+               and w.tenantId = t.tenantId
+            join Tenant tenant
+                on tenant.id = t.tenantId
+            left join User createdByUser
+                on createdByUser.id = t.createdBy
+               and createdByUser.tenantId = t.tenantId
+            where t.tenantId = :tenantId
+              and t.walletId in :walletIds
+              and t.walletId = coalesce(:walletId, t.walletId)
+              and w.branchId = coalesce(:branchId, w.branchId)
+              and t.type = coalesce(:type, t.type)
+              and (:filterByCreatedBy = false or t.createdBy = :createdByUserId)
+              and t.isCash = coalesce(:cash, t.isCash)
+              and t.occurredAt >= coalesce(:fromDate, t.occurredAt)
+              and t.occurredAt <= coalesce(:toDate, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """,
+            countQuery = """
+                    select count(t)
+                    from Transaction t
+                    join Wallet w
+                        on w.id = t.walletId
+                       and w.tenantId = t.tenantId
+                    where t.tenantId = :tenantId
+                      and t.walletId in :walletIds
+                      and t.walletId = coalesce(:walletId, t.walletId)
+                      and w.branchId = coalesce(:branchId, w.branchId)
+                      and t.type = coalesce(:type, t.type)
+                      and (:filterByCreatedBy = false or t.createdBy = :createdByUserId)
+                      and t.isCash = coalesce(:cash, t.isCash)
+                      and t.occurredAt >= coalesce(:fromDate, t.occurredAt)
+                      and t.occurredAt <= coalesce(:toDate, t.occurredAt)
+                    """)
+    Page<TransactionReportReadModel> findTransactionReportByTenantIdAndWalletIdIn(@Param("tenantId") UUID tenantId,
+                                                                                   @Param("walletIds") List<UUID> walletIds,
+                                                                                   @Param("walletId") @Nullable UUID walletId,
+                                                                                   @Param("branchId") @Nullable UUID branchId,
+                                                                                   @Param("type") @Nullable TransactionType type,
+                                                                                   @Param("filterByCreatedBy") boolean filterByCreatedBy,
+                                                                                   @Param("createdByUserId") @Nullable UUID createdByUserId,
+                                                                                   @Param("cash") @Nullable Boolean cash,
+                                                                                   @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                                   @Param("toDate") @Nullable LocalDateTime toDate,
+                                                                                   Pageable pageable);
 
     default Page<Transaction> findAllByFilters(UUID tenantId,
                                                @Nullable UUID walletId,
@@ -48,6 +269,128 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     @Query("SELECT COALESCE(SUM(t.percent), 0) FROM Transaction t WHERE t.tenantId = :tenantId")
     BigDecimal sumFeeByTenant(@Param("tenantId") UUID tenantId);
 
+    @Query(value = """
+            SELECT
+              TO_CHAR(DATE_TRUNC('day', t.occurred_at), 'YYYY-MM-DD') AS "period",
+              COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount ELSE 0 END), 0) AS "totalCredits",
+              COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0) AS "totalDebits",
+              COUNT(t.id) AS "transactionCount"
+            FROM transactions t
+            WHERE t.tenant_id = :tenantId
+              AND t.wallet_id = COALESCE(:walletId, t.wallet_id)
+              AND t.occurred_at >= COALESCE(:fromDate, t.occurred_at)
+              AND t.occurred_at <= COALESCE(:toDate, t.occurred_at)
+            GROUP BY DATE_TRUNC('day', t.occurred_at)
+            ORDER BY DATE_TRUNC('day', t.occurred_at)
+            """, nativeQuery = true)
+    List<TransactionTimeAggregationProjection> getDailyTimeAggregation(@Param("tenantId") UUID tenantId,
+                                                                       @Param("walletId") @Nullable UUID walletId,
+                                                                       @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                       @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query(value = """
+            SELECT
+              TO_CHAR(DATE_TRUNC('month', t.occurred_at), 'YYYY-MM') AS "period",
+              COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount ELSE 0 END), 0) AS "totalCredits",
+              COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0) AS "totalDebits",
+              COUNT(t.id) AS "transactionCount"
+            FROM transactions t
+            WHERE t.tenant_id = :tenantId
+              AND t.wallet_id = COALESCE(:walletId, t.wallet_id)
+              AND t.occurred_at >= COALESCE(:fromDate, t.occurred_at)
+              AND t.occurred_at <= COALESCE(:toDate, t.occurred_at)
+            GROUP BY DATE_TRUNC('month', t.occurred_at)
+            ORDER BY DATE_TRUNC('month', t.occurred_at)
+            """, nativeQuery = true)
+    List<TransactionTimeAggregationProjection> getMonthlyTimeAggregation(@Param("tenantId") UUID tenantId,
+                                                                         @Param("walletId") @Nullable UUID walletId,
+                                                                         @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                         @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query(value = """
+            SELECT
+              TO_CHAR(DATE_TRUNC('day', t.occurred_at), 'YYYY-MM-DD') AS "period",
+              COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount ELSE 0 END), 0) AS "totalCredits",
+              COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0) AS "totalDebits",
+              COUNT(t.id) AS "transactionCount"
+            FROM transactions t
+            WHERE t.tenant_id = :tenantId
+              AND t.wallet_id IN (:walletIds)
+              AND t.occurred_at >= COALESCE(:fromDate, t.occurred_at)
+              AND t.occurred_at <= COALESCE(:toDate, t.occurred_at)
+            GROUP BY DATE_TRUNC('day', t.occurred_at)
+            ORDER BY DATE_TRUNC('day', t.occurred_at)
+            """, nativeQuery = true)
+    List<TransactionTimeAggregationProjection> getDailyTimeAggregationForWallets(@Param("tenantId") UUID tenantId,
+                                                                                 @Param("walletIds") List<UUID> walletIds,
+                                                                                 @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                                 @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query(value = """
+            SELECT
+              TO_CHAR(DATE_TRUNC('month', t.occurred_at), 'YYYY-MM') AS "period",
+              COALESCE(SUM(CASE WHEN t.type = 'CREDIT' THEN t.amount ELSE 0 END), 0) AS "totalCredits",
+              COALESCE(SUM(CASE WHEN t.type = 'DEBIT' THEN t.amount ELSE 0 END), 0) AS "totalDebits",
+              COUNT(t.id) AS "transactionCount"
+            FROM transactions t
+            WHERE t.tenant_id = :tenantId
+              AND t.wallet_id IN (:walletIds)
+              AND t.occurred_at >= COALESCE(:fromDate, t.occurred_at)
+              AND t.occurred_at <= COALESCE(:toDate, t.occurred_at)
+            GROUP BY DATE_TRUNC('month', t.occurred_at)
+            ORDER BY DATE_TRUNC('month', t.occurred_at)
+            """, nativeQuery = true)
+    List<TransactionTimeAggregationProjection> getMonthlyTimeAggregationForWallets(@Param("tenantId") UUID tenantId,
+                                                                                   @Param("walletIds") List<UUID> walletIds,
+                                                                                   @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                                                   @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query("""
+            SELECT
+              COALESCE(SUM(CASE
+                  WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT AND t.isCash = true
+                      THEN 0
+                  ELSE t.percent
+              END), 0) as totalWalletProfit,
+              COALESCE(SUM(CASE
+                  WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT AND t.isCash = true
+                      THEN t.percent
+                  ELSE 0
+              END), 0) as totalCashProfit
+            FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.walletId = COALESCE(:walletId, t.walletId)
+              AND t.occurredAt >= COALESCE(:fromDate, t.occurredAt)
+              AND t.occurredAt <= COALESCE(:toDate, t.occurredAt)
+            """)
+    ProfitSummaryProjection getProfitSummary(@Param("tenantId") UUID tenantId,
+                                             @Param("walletId") @Nullable UUID walletId,
+                                             @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                             @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query("""
+            SELECT
+              COALESCE(SUM(CASE
+                  WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT AND t.isCash = true
+                      THEN 0
+                  ELSE t.percent
+              END), 0) as totalWalletProfit,
+              COALESCE(SUM(CASE
+                  WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT AND t.isCash = true
+                      THEN t.percent
+                  ELSE 0
+              END), 0) as totalCashProfit
+            FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.walletId IN :walletIds
+              AND t.occurredAt >= COALESCE(:fromDate, t.occurredAt)
+              AND t.occurredAt <= COALESCE(:toDate, t.occurredAt)
+            """)
+    ProfitSummaryProjection getProfitSummaryForWallets(@Param("tenantId") UUID tenantId,
+                                                       @Param("walletIds") List<UUID> walletIds,
+                                                       @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                       @Param("toDate") @Nullable LocalDateTime toDate);
+
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0)
             FROM Transaction t
@@ -62,17 +405,33 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
 
     @Query("""
             SELECT
-              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT THEN t.amount ELSE 0 END), 0),
-              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.DEBIT THEN t.amount ELSE 0 END), 0),
-              COUNT(t)
+              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT THEN t.amount ELSE 0 END), 0) as totalCredits,
+              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.DEBIT THEN t.amount ELSE 0 END), 0) as totalDebits,
+              COUNT(t) as transactionCount
             FROM Transaction t
             WHERE t.tenantId = :tenantId
-              AND (:walletId IS NULL OR t.walletId = :walletId)
-              AND (:fromDate IS NULL OR t.occurredAt >= :fromDate)
-              AND (:toDate IS NULL OR t.occurredAt <= :toDate)
+              AND t.walletId = COALESCE(:walletId, t.walletId)
+              AND t.occurredAt >= COALESCE(:fromDate, t.occurredAt)
+              AND t.occurredAt <= COALESCE(:toDate, t.occurredAt)
             """)
-    Object[] getSummary(@Param("tenantId") UUID tenantId,
-                        @Param("walletId") @Nullable UUID walletId,
-                        @Param("fromDate") @Nullable LocalDateTime fromDate,
-                        @Param("toDate") @Nullable LocalDateTime toDate);
+    TransactionSummaryProjection getSummary(@Param("tenantId") UUID tenantId,
+                                            @Param("walletId") @Nullable UUID walletId,
+                                            @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                            @Param("toDate") @Nullable LocalDateTime toDate);
+
+    @Query("""
+            SELECT
+              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.CREDIT THEN t.amount ELSE 0 END), 0) as totalCredits,
+              COALESCE(SUM(CASE WHEN t.type = com.wallet.walletapp.transaction.TransactionType.DEBIT THEN t.amount ELSE 0 END), 0) as totalDebits,
+              COUNT(t) as transactionCount
+            FROM Transaction t
+            WHERE t.tenantId = :tenantId
+              AND t.walletId IN :walletIds
+              AND t.occurredAt >= COALESCE(:fromDate, t.occurredAt)
+              AND t.occurredAt <= COALESCE(:toDate, t.occurredAt)
+            """)
+    TransactionSummaryProjection getSummaryForWallets(@Param("tenantId") UUID tenantId,
+                                                      @Param("walletIds") List<UUID> walletIds,
+                                                      @Param("fromDate") @Nullable LocalDateTime fromDate,
+                                                      @Param("toDate") @Nullable LocalDateTime toDate);
 }

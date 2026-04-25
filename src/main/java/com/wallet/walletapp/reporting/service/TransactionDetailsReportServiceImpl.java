@@ -2,13 +2,11 @@ package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.reporting.dto.TransactionDetailRowDto;
-import com.wallet.walletapp.transaction.Transaction;
+import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
 import com.wallet.walletapp.transaction.TransactionRepository;
 import com.wallet.walletapp.transaction.TransactionType;
 import com.wallet.walletapp.user.Role;
-import com.wallet.walletapp.wallet.WalletUser;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
@@ -29,43 +27,61 @@ public class TransactionDetailsReportServiceImpl implements TransactionDetailsRe
     private static final int MAX_PAGE_SIZE = 100;
 
     private final TransactionRepository transactionRepository;
-    private final WalletUserRepository walletUserRepository;
+    private final UserWalletAccessService userWalletAccessService;
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TransactionDetailRowDto> generate(@Nullable UUID walletId,
-                                                  @Nullable TransactionType type,
-                                                  @Nullable LocalDateTime fromDate,
-                                                  @Nullable LocalDateTime toDate,
-                                                  int page,
-                                                  int size) {
+    public Page<TransactionReportReadModel> generate(@Nullable UUID walletId,
+                                                     @Nullable UUID branchId,
+                                                     @Nullable TransactionType type,
+                                                     @Nullable UUID createdByUserId,
+                                                     @Nullable Boolean cash,
+                                                     @Nullable LocalDateTime fromDate,
+                                                     @Nullable LocalDateTime toDate,
+                                                     int page,
+                                                     int size) {
         UserPrincipal user = currentUser();
         Pageable pageable = buildPageable(page, size);
+        boolean filterByCreatedBy = createdByUserId != null;
 
         if (user.getRole() == Role.USER) {
-            List<UUID> assignedWalletIds = walletUserRepository.findByUserIdAndTenantId(user.getUserId(), user.getTenantId())
-                    .stream()
-                    .map(WalletUser::getWalletId)
-                    .toList();
+            List<UUID> assignedWalletIds = userWalletAccessService.getAccessibleWalletIds(user);
 
-            if (walletId != null) {
-                if (!assignedWalletIds.contains(walletId)) {
-                    throw new UnauthorizedException("Access denied to wallet");
-                }
-                return transactionRepository.findAllByFilters(user.getTenantId(), walletId, type, fromDate, toDate, pageable)
-                        .map(this::toDto);
+            if (walletId != null && !assignedWalletIds.contains(walletId)) {
+                throw new UnauthorizedException("Access denied to wallet");
             }
 
             if (assignedWalletIds.isEmpty()) {
                 return Page.empty(pageable);
             }
 
-            return transactionRepository.findAllByFilters(user.getTenantId(), assignedWalletIds, type, fromDate, toDate, pageable)
-                    .map(this::toDto);
+            return transactionRepository.findTransactionReportByTenantIdAndWalletIdIn(
+                    user.getTenantId(),
+                    assignedWalletIds,
+                    walletId,
+                    branchId,
+                    type,
+                    filterByCreatedBy,
+                    createdByUserId,
+                    cash,
+                    fromDate,
+                    toDate,
+                    pageable
+            );
         }
 
-        return transactionRepository.findAllByFilters(user.getTenantId(), walletId, type, fromDate, toDate, pageable)
-                .map(this::toDto);
+        return transactionRepository.findTransactionReportByTenantId(
+                user.getTenantId(),
+                walletId,
+                branchId,
+                type,
+                filterByCreatedBy,
+                createdByUserId,
+                cash,
+                fromDate,
+                toDate,
+                pageable
+        );
     }
 
     private Pageable buildPageable(int page, int size) {
@@ -73,21 +89,6 @@ public class TransactionDetailsReportServiceImpl implements TransactionDetailsRe
             throw new IllegalArgumentException("Invalid pagination parameters");
         }
         return PageRequest.of(page, size);
-    }
-
-    private TransactionDetailRowDto toDto(Transaction transaction) {
-        TransactionDetailRowDto dto = new TransactionDetailRowDto();
-        dto.setId(transaction.getId());
-        dto.setWalletId(transaction.getWalletId());
-        dto.setAmount(transaction.getAmount());
-        dto.setType(transaction.getType());
-        dto.setPercent(transaction.getPercent());
-        dto.setPhoneNumber(transaction.getPhoneNumber());
-        dto.setCash(transaction.isCash());
-        dto.setDescription(transaction.getDescription());
-        dto.setOccurredAt(transaction.getOccurredAt());
-        dto.setCreatedAt(transaction.getCreatedAt());
-        return dto;
     }
 
     private UserPrincipal currentUser() {

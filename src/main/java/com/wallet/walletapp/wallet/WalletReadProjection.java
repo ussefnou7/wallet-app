@@ -14,6 +14,8 @@ public interface WalletReadProjection {
 
     UUID getBranchId();
 
+    String getBranchName();
+
     String getName();
 
     String getNumber();

@@ -5,12 +5,13 @@ import com.wallet.walletapp.common.TenantContext;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
+import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.Wallet;
 import com.wallet.walletapp.wallet.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
-import com.wallet.walletapp.wallet.WalletUserRepository;
+import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
@@ -22,7 +23,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -33,7 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository transactionRepository;
     private final WalletRepository walletRepository;
-    private final WalletUserRepository walletUserRepository;
+    private final UserWalletAccessService userWalletAccessService;
     private final TransactionMapper transactionMapper;
     private final WalletConsumptionService walletConsumptionService;
 
@@ -56,6 +56,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         Transaction transaction = buildTransaction(request, tenantId, externalTransactionId, occurredAt);
         transaction.setTenantId(tenantId);
+        transaction.setCreatedBy(user.getUserId());
 
         try {
             Transaction saved = transactionRepository.saveAndFlush(transaction);
@@ -80,42 +81,36 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TransactionResponse> getAllTransactions(@Nullable UUID walletId, @Nullable TransactionType type,
-                                                        @Nullable LocalDateTime dateFrom, @Nullable LocalDateTime dateTo) {
+    public List<TransactionReadResponse> getAllTransactions(@Nullable UUID walletId, @Nullable TransactionType type,
+                                                            @Nullable LocalDateTime dateFrom, @Nullable LocalDateTime dateTo) {
         UserPrincipal user = currentUser();
         UUID tenantId = user.getTenantId();
 
         if (user.getRole() == Role.SYSTEM_ADMIN) {
-            return transactionRepository.findAll().stream()
-                    .map(transactionMapper::toResponse)
+            return transactionRepository.findAllForRead(walletId, type, dateFrom, dateTo).stream()
+                    .map(transactionMapper::toReadResponse)
                     .collect(Collectors.toList());
         } else {
-            return transactionRepository.findAll(
-                            TransactionSpecifications.byFilters(tenantId, walletId, type, dateFrom, dateTo))
-                    .stream()
-                    .map(transactionMapper::toResponse)
+            return transactionRepository.findAllByTenantIdForRead(tenantId, walletId, type, dateFrom, dateTo).stream()
+                    .map(transactionMapper::toReadResponse)
                     .collect(Collectors.toList());
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public TransactionResponse getTransactionById(UUID id) {
+    public TransactionReadResponse getTransactionById(UUID id) {
         UserPrincipal user = currentUser();
-        Transaction transaction = transactionRepository.findByIdAndTenantId(id, user.getTenantId())
+        TransactionReadProjection transaction = transactionRepository.findReadByIdAndTenantId(id, user.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException("Transaction not found"));
 
         validateWalletAccess(user, transaction.getWalletId(), user.getTenantId());
-        return transactionMapper.toResponse(transaction);
+        return transactionMapper.toReadResponse(transaction);
     }
 
     private void validateWalletAccess(UserPrincipal user, UUID walletId, UUID tenantId) {
-        if (user.getRole() == Role.USER) {
-            boolean hasAccess = walletUserRepository.existsByUserIdAndWalletIdAndTenantId(
-                    user.getUserId(), walletId, tenantId);
-            if (!hasAccess) {
-                throw new UnauthorizedException("Access denied to wallet");
-            }
+        if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
+            throw new UnauthorizedException("Access denied to wallet");
         }
     }
 
