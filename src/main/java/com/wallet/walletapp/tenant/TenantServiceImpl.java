@@ -33,6 +33,7 @@ public class TenantServiceImpl implements TenantService {
 
         Tenant tenant = new Tenant();
         tenant.setName(request.getName());
+        tenant.setPhoneNumber(request.getPhoneNumber());
         tenant.setActive(true);
 
         tenant = tenantRepository.save(tenant);
@@ -69,6 +70,7 @@ public class TenantServiceImpl implements TenantService {
         }
 
         tenant.setName(requestedName);
+        tenant.setPhoneNumber(request.getPhoneNumber());
         tenant.setActive(request.isActive());
         tenant = tenantRepository.save(tenant);
         log.info("Tenant {} updated", id);

@@ -8,4 +8,6 @@ public class CreateTenantRequest {
 
     @NotBlank
     private String name;
+
+    private String phoneNumber;
 }

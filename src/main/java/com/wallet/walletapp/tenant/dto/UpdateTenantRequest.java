@@ -9,5 +9,7 @@ public class UpdateTenantRequest {
     @NotBlank
     private String name;
 
+    private String phoneNumber;
+
     private boolean active;
 }

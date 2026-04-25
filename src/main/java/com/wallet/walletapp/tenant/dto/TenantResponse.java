@@ -10,6 +10,7 @@ public class TenantResponse {
 
     private UUID id;
     private String name;
+    private String phoneNumber;
     private boolean active;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

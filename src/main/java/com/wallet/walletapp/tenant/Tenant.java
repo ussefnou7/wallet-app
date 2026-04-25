@@ -26,4 +26,7 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "expiry_date")
     private LocalDateTime expiryDate;
+
+    @Column
+    private String phoneNumber;
 }
