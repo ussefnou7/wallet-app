@@ -18,7 +18,9 @@ public class SupportTicketMapper {
                 projection.getCreatedAt(),
                 projection.getUpdatedAt(),
                 projection.getResolvedAt(),
-                projection.getResolvedBy()
+                projection.getResolvedBy(),
+                projection.getTenantName(),
+                projection.getCreatedByName()
         );
     }
 
@@ -34,7 +36,9 @@ public class SupportTicketMapper {
                 ticket.getCreatedAt(),
                 ticket.getUpdatedAt(),
                 ticket.getResolvedAt(),
-                ticket.getResolvedBy()
+                ticket.getResolvedBy(),
+                null,
+                null
         );
     }
 }

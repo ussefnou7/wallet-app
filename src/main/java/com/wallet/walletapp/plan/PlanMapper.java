@@ -10,6 +10,7 @@ public class PlanMapper {
         PlanResponse response = new PlanResponse();
         response.setId(plan.getId());
         response.setName(plan.getName());
+        response.setPrice(plan.getPrice());
         response.setDescription(plan.getDescription());
         response.setMaxUsers(plan.getMaxUsers());
         response.setMaxWallets(plan.getMaxWallets());

@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class CreatePlanRequest {
 
@@ -26,4 +28,6 @@ public class CreatePlanRequest {
     private Integer maxBranches;
 
     private boolean active = true;
+
+    private BigDecimal price;
 }

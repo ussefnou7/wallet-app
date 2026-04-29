@@ -23,8 +23,12 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdAt as createdAt,
                 t.updatedAt as updatedAt,
                 t.resolvedAt as resolvedAt,
-                t.resolvedBy as resolvedBy
+                t.resolvedBy as resolvedBy,
+                tenant.name as tenantName,
+                creator.username as createdByName
             from SupportTicket t
+                   join Tenant tenant on tenant.id = t.tenantId
+                   join User creator on creator.id = t.createdBy
             where t.tenantId = :tenantId
             order by t.createdAt desc
             """)
@@ -42,8 +46,12 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdAt as createdAt,
                 t.updatedAt as updatedAt,
                 t.resolvedAt as resolvedAt,
-                t.resolvedBy as resolvedBy
+                t.resolvedBy as resolvedBy,
+                tenant.name as tenantName,
+                creator.username as createdByName
             from SupportTicket t
+                   join Tenant tenant on tenant.id = t.tenantId
+                   join User creator on creator.id = t.createdBy
             where t.id = :ticketId
               and t.tenantId = :tenantId
             """)
@@ -62,8 +70,12 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdAt as createdAt,
                 t.updatedAt as updatedAt,
                 t.resolvedAt as resolvedAt,
-                t.resolvedBy as resolvedBy
+                t.resolvedBy as resolvedBy,
+                tenant.name as tenantName,
+                creator.username as createdByName
             from SupportTicket t
+                   join Tenant tenant on tenant.id = t.tenantId
+                   join User creator on creator.id = t.createdBy
             where t.tenantId = coalesce(:tenantId, t.tenantId)
               and t.status = coalesce(:status, t.status)
               and t.priority = coalesce(:priority, t.priority)

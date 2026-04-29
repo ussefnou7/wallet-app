@@ -237,6 +237,20 @@ class RenewalRequestServiceImplTest {
             public LocalDateTime getUpdatedAt() {
                 return createdAt.plusMinutes(5);
             }
+
+            @Override
+            public String getTenantName() {
+                return  null;
+            }
+
+            @Override
+            public String getRequestedByName() {
+                return null;
+            }
+            @Override
+            public String getReviewedByName() {
+                return null;
+            }
         };
     }
 }

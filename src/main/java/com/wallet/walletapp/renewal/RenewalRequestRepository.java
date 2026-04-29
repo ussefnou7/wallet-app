@@ -24,8 +24,14 @@ public interface RenewalRequestRepository extends JpaRepository<RenewalRequest, 
                 r.reviewedBy as reviewedBy,
                 r.adminNote as adminNote,
                 r.createdAt as createdAt,
-                r.updatedAt as updatedAt
+                r.updatedAt as updatedAt,
+                t.name as tenantName,
+                u.username as requestedByName,
+                uu.username as reviewedByName
             from RenewalRequest r
+                   join Tenant t on t.id = r.tenantId
+                   join User u on u.id = r.requestedBy
+                   left join User uu on uu.id = r.reviewedBy
             where r.tenantId = :tenantId
             order by r.createdAt desc
             """)
@@ -44,13 +50,18 @@ public interface RenewalRequestRepository extends JpaRepository<RenewalRequest, 
                 r.reviewedBy as reviewedBy,
                 r.adminNote as adminNote,
                 r.createdAt as createdAt,
-                r.updatedAt as updatedAt
+                r.updatedAt as updatedAt,
+                t.name as tenantName,
+                u.username as requestedByName,
+                uu.username as reviewedByName
             from RenewalRequest r
+                   join Tenant t on t.id = r.tenantId
+                   join User u on u.id = r.requestedBy
+                   left join User uu on uu.id = r.reviewedBy
             where r.id = :requestId
               and r.tenantId = :tenantId
             """)
-    Optional<RenewalRequestReadProjection> findByIdAndTenantIdForRead(@Param("requestId") UUID requestId,
-                                                                      @Param("tenantId") UUID tenantId);
+    Optional<RenewalRequestReadProjection> findByIdAndTenantIdForRead(@Param("requestId") UUID requestId, @Param("tenantId") UUID tenantId);
 
     @Query("""
             select
@@ -65,12 +76,17 @@ public interface RenewalRequestRepository extends JpaRepository<RenewalRequest, 
                 r.reviewedBy as reviewedBy,
                 r.adminNote as adminNote,
                 r.createdAt as createdAt,
-                r.updatedAt as updatedAt
+                r.updatedAt as updatedAt,
+                t.name as tenantName,
+                u.username as requestedByName,
+                uu.username as reviewedByName
             from RenewalRequest r
+                   join Tenant t on t.id = r.tenantId
+                   join User u on u.id = r.requestedBy
+                   left join User uu on uu.id = r.reviewedBy
             where r.tenantId = coalesce(:tenantId, r.tenantId)
               and r.status = coalesce(:status, r.status)
             order by r.createdAt desc
             """)
-    List<RenewalRequestReadProjection> findAllForAdmin(@Param("tenantId") @Nullable UUID tenantId,
-                                                       @Param("status") @Nullable RenewalRequestStatus status);
+    List<RenewalRequestReadProjection> findAllForAdmin(@Param("tenantId") @Nullable UUID tenantId, @Param("status") @Nullable RenewalRequestStatus status);
 }

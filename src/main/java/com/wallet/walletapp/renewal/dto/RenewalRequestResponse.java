@@ -26,4 +26,7 @@ public class RenewalRequestResponse {
     private LocalDateTime reviewedAt;
     private UUID reviewedBy;
     private String adminNote;
+    private String tenantName;
+    private String requestedByName;
+    private String reviewedByName;
 }

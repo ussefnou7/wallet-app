@@ -25,6 +25,7 @@ public class PlanService {
     public PlanResponse createPlan(CreatePlanRequest request) {
         Plan plan = Plan.builder()
                 .name(request.getName().trim())
+                .price(request.getPrice())
                 .description(request.getDescription())
                 .maxUsers(request.getMaxUsers())
                 .maxWallets(request.getMaxWallets())

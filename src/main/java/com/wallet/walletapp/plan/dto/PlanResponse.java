@@ -2,6 +2,7 @@ package com.wallet.walletapp.plan.dto;
 
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -10,6 +11,7 @@ public class PlanResponse {
 
     private UUID id;
     private String name;
+    private BigDecimal price;
     private String description;
     private Integer maxUsers;
     private Integer maxWallets;

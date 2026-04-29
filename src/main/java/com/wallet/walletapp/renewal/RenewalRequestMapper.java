@@ -19,7 +19,10 @@ public class RenewalRequestMapper {
                 projection.getUpdatedAt(),
                 projection.getReviewedAt(),
                 projection.getReviewedBy(),
-                projection.getAdminNote()
+                projection.getAdminNote(),
+                projection.getTenantName(),
+                projection.getRequestedByName(),
+                projection.getReviewedByName()
         );
     }
 
@@ -36,7 +39,10 @@ public class RenewalRequestMapper {
                 request.getUpdatedAt(),
                 request.getReviewedAt(),
                 request.getReviewedBy(),
-                request.getAdminNote()
+                request.getAdminNote(),
+                null,
+                null,
+                null
         );
     }
 }

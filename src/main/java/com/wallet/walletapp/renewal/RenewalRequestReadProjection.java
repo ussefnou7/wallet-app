@@ -29,4 +29,10 @@ public interface RenewalRequestReadProjection {
     LocalDateTime getCreatedAt();
 
     LocalDateTime getUpdatedAt();
+
+    String getRequestedByName();
+
+    String getReviewedByName();
+
+    String getTenantName();
 }

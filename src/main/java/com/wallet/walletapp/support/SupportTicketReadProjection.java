@@ -26,4 +26,8 @@ public interface SupportTicketReadProjection {
     LocalDateTime getResolvedAt();
 
     UUID getResolvedBy();
+
+    String getCreatedByName();
+
+    String getTenantName();
 }

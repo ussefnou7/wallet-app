@@ -27,7 +27,7 @@ public class PlanController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('SYSTEM_ADMIN')")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     public ResponseEntity<List<PlanResponse>> getAllPlans() {
         return ResponseEntity.ok(planService.getAllPlans());
     }

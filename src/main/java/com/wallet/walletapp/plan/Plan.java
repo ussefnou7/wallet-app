@@ -6,6 +6,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import lombok.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "plans")
 @Getter
@@ -33,4 +35,7 @@ public class Plan extends BaseEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean active = true;
+
+    @Column(name = "price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal price = BigDecimal.ZERO;
 }

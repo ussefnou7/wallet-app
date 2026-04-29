@@ -25,4 +25,6 @@ public class SupportTicketResponse {
     private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
     private UUID resolvedBy;
+    private String tenantName;
+    private String createdByName;
 }
