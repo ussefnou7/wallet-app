@@ -10,6 +10,7 @@ import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
+import com.wallet.walletapp.user.dto.ChangePasswordRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -45,9 +46,6 @@ class UserServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
-    private TenantRepository tenantRepository;
-
-    @Mock
     private BranchRepository branchRepository;
 
     @Mock
@@ -58,9 +56,6 @@ class UserServiceImplTest {
 
     @Mock
     private UserMapper userMapper;
-
-    @Mock
-    private SubscriptionAccessService subscriptionAccessService;
 
     @InjectMocks
     private UserServiceImpl userService;
@@ -186,15 +181,78 @@ class UserServiceImplTest {
         verify(branchUserRepository).deleteAllByUserIdAndTenantId(userId, TENANT_ID);
     }
 
-    private void authenticate(Role role, UUID tenantId) {
-        UserPrincipal principal = new UserPrincipal(UUID.randomUUID(), "current-user", "password", tenantId, role);
+    @Test
+    void changeOwnPasswordUpdatesEncodedPassword() {
+        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
+        User user = user(currentUserId, TENANT_ID, Role.USER);
+        user.setPassword("encoded-old");
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPass123", "encoded-old")).thenReturn(true);
+        when(passwordEncoder.encode("newPass123")).thenReturn("encoded-new");
+
+        var result = userService.changePassword(changeOwnPasswordRequest("oldPass123", "newPass123", "newPass123"));
+
+        assertEquals("Password changed successfully", result.get("message"));
+        assertEquals("encoded-new", user.getPassword());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void changeOwnPasswordRejectsInvalidCurrentPassword() {
+        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
+        User user = user(currentUserId, TENANT_ID, Role.USER);
+        user.setPassword("encoded-old");
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrongPass123", "encoded-old")).thenReturn(false);
+
+        BusinessValidationException ex = assertThrows(
+                BusinessValidationException.class,
+                () -> userService.changePassword(changeOwnPasswordRequest("wrongPass123", "newPass123", "newPass123"))
+        );
+
+        assertEquals("Current password is invalid", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void changeOwnPasswordRejectsPasswordMismatch() {
+        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
+        User user = user(currentUserId, TENANT_ID, Role.USER);
+        user.setPassword("encoded-old");
+
+        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPass123", "encoded-old")).thenReturn(true);
+
+        BusinessValidationException ex = assertThrows(
+                BusinessValidationException.class,
+                () -> userService.changePassword(changeOwnPasswordRequest("oldPass123", "newPass123", "different123"))
+        );
+
+        assertEquals("Password confirmation does not match", ex.getMessage());
+        verify(userRepository, never()).save(any());
+    }
+
+    private UUID authenticate(Role role, UUID tenantId) {
+        UUID userId = UUID.randomUUID();
+        UserPrincipal principal = new UserPrincipal(userId, "current-user", "password", tenantId, role);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+        return userId;
     }
 
     private AssignBranchRequest assignBranchRequest(UUID branchId) {
         AssignBranchRequest request = new AssignBranchRequest();
         request.setBranchId(branchId);
+        return request;
+    }
+
+    private ChangePasswordRequest changeOwnPasswordRequest(String currentPassword, String newPassword, String confirmPassword) {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword(currentPassword);
+        request.setNewPassword(newPassword);
+        request.setConfirmPassword(confirmPassword);
         return request;
     }
 

@@ -1,6 +1,7 @@
 package com.wallet.walletapp.user;
 
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
+import com.wallet.walletapp.user.dto.ChangePasswordRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
@@ -12,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -38,6 +40,11 @@ public class UserController {
             @PathVariable UUID id,
             @RequestBody UpdateUserRequest request) {
         return ResponseEntity.ok(userService.updateUser(id, request));
+    }
+
+    @PatchMapping("/me/password")
+    public ResponseEntity<Map<String, String>> changeOwnPassword(@Valid @RequestBody ChangePasswordRequest request) {
+        return ResponseEntity.ok(userService.changePassword(request));
     }
 
     @PutMapping("/{userId}/assign-branch")

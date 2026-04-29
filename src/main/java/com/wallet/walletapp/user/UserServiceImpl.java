@@ -12,6 +12,7 @@ import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
+import com.wallet.walletapp.user.dto.ChangePasswordRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
@@ -125,6 +126,27 @@ public class UserServiceImpl implements UserService {
         user = userRepository.save(user);
         return userMapper.toResponse(userRepository.findReadById(user.getId())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found after update")));
+    }
+
+    @Override
+    @Transactional
+    public Map<String, String> changePassword(ChangePasswordRequest request) {
+        UserPrincipal currentUser = currentUser();
+        User user = userRepository.findById(currentUser.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Current password is invalid",
+                    Map.of("currentPassword", "Current password is invalid")
+            );
+        }
+
+        validatePasswordConfirmation(request.getNewPassword(), request.getConfirmPassword());
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        return Map.of("message", "Password changed successfully");
     }
 
     @Override
@@ -287,6 +309,16 @@ public class UserServiceImpl implements UserService {
     private void validateSameTenant(User user, Branch branch) {
         if (!Objects.equals(user.getTenantId(), branch.getTenantId())) {
             throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "User and branch must belong to the same tenant");
+        }
+    }
+
+    private void validatePasswordConfirmation(String newPassword, String confirmPassword) {
+        if (!Objects.equals(newPassword, confirmPassword)) {
+            throw new BusinessValidationException(
+                    ErrorCode.BAD_REQUEST,
+                    "Password confirmation does not match",
+                    Map.of("confirmPassword", "Password confirmation does not match")
+            );
         }
     }
 
