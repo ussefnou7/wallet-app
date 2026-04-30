@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.MDC;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.InsufficientAuthenticationException;
 
@@ -16,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 
 class ApiSecurityHandlersTest {
 
-    private final ObjectMapper objectMapper = Jackson2ObjectMapperBuilder.json().build();
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private final ApiErrorResponseFactory errorResponseFactory = new ApiErrorResponseFactory();
 
     @AfterEach

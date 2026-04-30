@@ -1,7 +1,6 @@
 package com.wallet.walletapp.auth;
 
 import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.jspecify.annotations.NonNull;
@@ -48,14 +47,5 @@ public class JwtUtil {
 
     private @NonNull SecretKey getKey() {
         return signingKey();
-    }
-
-    public boolean isTokenValid(String token) {
-        try {
-            extractClaims(token);
-            return true;
-        } catch (JwtException | IllegalArgumentException e) {
-            return false;
-        }
     }
 }
