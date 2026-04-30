@@ -17,6 +17,7 @@ public enum ErrorCode {
     WALLET_NOT_FOUND("WALLET_NOT_FOUND", "Wallet not found", HttpStatus.NOT_FOUND),
     BRANCH_NOT_FOUND("BRANCH_NOT_FOUND", "Branch not found", HttpStatus.NOT_FOUND),
     TRANSACTION_NOT_FOUND("TRANSACTION_NOT_FOUND", "Transaction not found", HttpStatus.NOT_FOUND),
+    NOTIFICATION_NOT_FOUND("NOTIFICATION_NOT_FOUND", "Notification not found", HttpStatus.NOT_FOUND),
     SUPPORT_TICKET_NOT_FOUND("SUPPORT_TICKET_NOT_FOUND", "Support ticket not found", HttpStatus.NOT_FOUND),
     RENEWAL_REQUEST_NOT_FOUND("RENEWAL_REQUEST_NOT_FOUND", "Renewal request not found", HttpStatus.NOT_FOUND),
     DUPLICATED_TRANSACTION("DUPLICATED_TRANSACTION", "This transaction was already submitted", HttpStatus.CONFLICT),

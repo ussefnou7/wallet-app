@@ -1,11 +1,18 @@
 package com.wallet.walletapp.transaction;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.notification.TransactionNotificationService;
+import com.wallet.walletapp.notification.WalletConsumptionNotificationService;
 import com.wallet.walletapp.exception.UnauthorizedException;
+import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
 import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
+import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
+import com.wallet.walletapp.wallet.Wallet;
+import com.wallet.walletapp.wallet.WalletConsumption;
 import com.wallet.walletapp.wallet.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
+import com.wallet.walletapp.wallet.WalletType;
 import com.wallet.walletapp.wallet.UserWalletAccessService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +25,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -46,6 +58,12 @@ class TransactionServiceImplTest {
     @Mock
     private WalletConsumptionService walletConsumptionService;
 
+    @Mock
+    private TransactionNotificationService transactionNotificationService;
+
+    @Mock
+    private WalletConsumptionNotificationService walletConsumptionNotificationService;
+
     private TransactionServiceImpl service;
 
     @BeforeEach
@@ -55,7 +73,9 @@ class TransactionServiceImplTest {
                 walletRepository,
                 userWalletAccessService,
                 new TransactionMapper(),
-                walletConsumptionService
+                walletConsumptionService,
+                transactionNotificationService,
+                walletConsumptionNotificationService
         );
     }
 
@@ -115,10 +135,93 @@ class TransactionServiceImplTest {
         assertThrows(UnauthorizedException.class, () -> service.getTransactionById(transactionId));
     }
 
+    @Test
+    void createTransactionCreatesLowOwnerNotificationsThenEvaluatesWalletConsumptionNotifications() {
+        authenticate(Role.OWNER);
+
+        UUID walletId = UUID.randomUUID();
+        UUID transactionId = UUID.randomUUID();
+        Wallet wallet = wallet(walletId);
+
+        CreateTransactionRequest request = new CreateTransactionRequest();
+        request.setWalletId(walletId);
+        request.setExternalTransactionId("trx-123");
+        request.setAmount(BigDecimal.valueOf(50));
+        request.setType(TransactionType.CREDIT);
+        request.setPercent(BigDecimal.valueOf(5));
+        request.setPhoneNumber("0123456789");
+        request.setDescription("topup");
+        request.setCash(false);
+        request.setOccurredAt(LocalDateTime.of(2026, 4, 30, 12, 0));
+
+        when(walletRepository.findByIdAndTenantId(walletId, TENANT_ID)).thenReturn(Optional.of(wallet));
+        when(transactionRepository.findByTenantIdAndExternalTransactionId(TENANT_ID, "trx-123")).thenReturn(Optional.empty());
+        when(transactionRepository.saveAndFlush(any(Transaction.class))).thenAnswer(invocation -> {
+            Transaction saved = invocation.getArgument(0);
+            saved.setId(transactionId);
+            saved.setCreatedAt(LocalDateTime.of(2026, 4, 30, 12, 1));
+            saved.setUpdatedAt(LocalDateTime.of(2026, 4, 30, 12, 1));
+            return saved;
+        });
+
+        TransactionResponse response = service.createTransaction(request);
+
+        assertEquals(transactionId, response.getId());
+        assertEquals(walletId, response.getWalletId());
+        assertEquals(BigDecimal.valueOf(50), response.getAmount());
+
+        org.mockito.InOrder inOrder = inOrder(
+                transactionRepository,
+                transactionNotificationService,
+                walletRepository,
+                walletConsumptionService,
+                walletConsumptionNotificationService
+        );
+        inOrder.verify(transactionRepository).saveAndFlush(any(Transaction.class));
+        inOrder.verify(transactionNotificationService).createTransactionCreatedNotifications(
+                eq(wallet),
+                argThat(candidate -> candidate != null && transactionId.equals(candidate.getId())),
+                eq("current-user")
+        );
+        inOrder.verify(walletRepository).save(wallet);
+        inOrder.verify(walletConsumptionService).applyTransaction(
+                eq(wallet),
+                argThat(candidate -> candidate != null && transactionId.equals(candidate.getId()))
+        );
+        inOrder.verify(walletConsumptionNotificationService).evaluateAndCreateWalletLimitNotifications(wallet, wallet.getConsumption());
+    }
+
     private void authenticate(Role role) {
         UserPrincipal principal = new UserPrincipal(USER_ID, "current-user", "password", TENANT_ID, role);
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities()));
+    }
+
+    private Wallet wallet(UUID walletId) {
+        Wallet wallet = Wallet.builder()
+                .name("Main Wallet")
+                .number("123")
+                .balance(BigDecimal.valueOf(100))
+                .active(true)
+                .type(WalletType.Vodafone)
+                .branchId(UUID.randomUUID())
+                .dailyLimit(BigDecimal.valueOf(1000))
+                .monthlyLimit(BigDecimal.valueOf(10000))
+                .cashProfit(BigDecimal.ZERO)
+                .walletProfit(BigDecimal.ZERO)
+                .build();
+        wallet.setId(walletId);
+        wallet.setTenantId(TENANT_ID);
+        wallet.setConsumption(WalletConsumption.builder()
+                .wallet(wallet)
+                .walletId(walletId)
+                .dailyConsumed(BigDecimal.ZERO)
+                .monthlyConsumed(BigDecimal.ZERO)
+                .dailyWindowDate(LocalDate.of(2026, 4, 30))
+                .monthlyWindowKey("2026-04")
+                .isNew(false)
+                .build());
+        return wallet;
     }
 
     private TransactionReadProjection projection(UUID transactionId,

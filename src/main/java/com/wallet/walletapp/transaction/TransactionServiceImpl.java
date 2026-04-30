@@ -7,10 +7,12 @@ import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
+import com.wallet.walletapp.notification.TransactionNotificationService;
 import com.wallet.walletapp.transaction.dto.CreateTransactionRequest;
 import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
+import com.wallet.walletapp.notification.WalletConsumptionNotificationService;
 import com.wallet.walletapp.wallet.Wallet;
 import com.wallet.walletapp.wallet.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
@@ -39,6 +41,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final UserWalletAccessService userWalletAccessService;
     private final TransactionMapper transactionMapper;
     private final WalletConsumptionService walletConsumptionService;
+    private final TransactionNotificationService transactionNotificationService;
+    private final WalletConsumptionNotificationService walletConsumptionNotificationService;
 
     @Override
     @Transactional
@@ -65,10 +69,12 @@ public class TransactionServiceImpl implements TransactionService {
         transaction.setCreatedBy(user.getUserId());
 
         Transaction saved = transactionRepository.saveAndFlush(transaction);
+        transactionNotificationService.createTransactionCreatedNotifications(wallet, saved, user.getUsername());
 
         applyBalanceUpdate(wallet, saved);
         walletRepository.save(wallet);
         walletConsumptionService.applyTransaction(wallet, saved);
+        walletConsumptionNotificationService.evaluateAndCreateWalletLimitNotifications(wallet, wallet.getConsumption());
 
         log.info("Transaction {} ({}) of {} created on wallet {}",
                 saved.getId(), saved.getType(), saved.getAmount(), wallet.getId());
