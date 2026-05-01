@@ -55,6 +55,47 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                                    @Param("dateFrom") @Nullable LocalDateTime dateFrom,
                                                    @Param("dateTo") @Nullable LocalDateTime dateTo);
 
+    @Query(value = """
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.walletId = coalesce(:walletId, t.walletId)
+              and t.type = coalesce(:type, t.type)
+              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """,
+            countQuery = """
+                    select count(t)
+                    from Transaction t
+                    where t.walletId = coalesce(:walletId, t.walletId)
+                      and t.type = coalesce(:type, t.type)
+                      and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+                      and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+                    """)
+    Page<TransactionReadProjection> findAllForRead(@Param("walletId") @Nullable UUID walletId,
+                                                   @Param("type") @Nullable TransactionType type,
+                                                   @Param("dateFrom") @Nullable LocalDateTime dateFrom,
+                                                   @Param("dateTo") @Nullable LocalDateTime dateTo,
+                                                   Pageable pageable);
+
     @Query("""
             select
                 t.id as id,
@@ -88,6 +129,97 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                                              @Param("type") @Nullable TransactionType type,
                                                              @Param("dateFrom") @Nullable LocalDateTime dateFrom,
                                                              @Param("dateTo") @Nullable LocalDateTime dateTo);
+
+    @Query(value = """
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.tenantId = :tenantId
+              and t.walletId = coalesce(:walletId, t.walletId)
+              and t.type = coalesce(:type, t.type)
+              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """,
+            countQuery = """
+                    select count(t)
+                    from Transaction t
+                    where t.tenantId = :tenantId
+                      and t.walletId = coalesce(:walletId, t.walletId)
+                      and t.type = coalesce(:type, t.type)
+                      and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+                      and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+                    """)
+    Page<TransactionReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId,
+                                                             @Param("walletId") @Nullable UUID walletId,
+                                                             @Param("type") @Nullable TransactionType type,
+                                                             @Param("dateFrom") @Nullable LocalDateTime dateFrom,
+                                                             @Param("dateTo") @Nullable LocalDateTime dateTo,
+                                                             Pageable pageable);
+
+    @Query(value = """
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.walletId as walletId,
+                w.name as walletName,
+                t.externalTransactionId as externalTransactionId,
+                t.amount as amount,
+                t.type as type,
+                t.percent as percent,
+                t.phoneNumber as phoneNumber,
+                t.isCash as cash,
+                t.description as description,
+                t.occurredAt as occurredAt,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.createdBy as createdBy,
+                u.username as createdByUsername
+            from Transaction t
+            join Wallet w on w.id = t.walletId
+            left join User u on u.id = t.createdBy
+            where t.tenantId = :tenantId
+              and t.walletId in :walletIds
+              and t.walletId = coalesce(:walletId, t.walletId)
+              and t.type = coalesce(:type, t.type)
+              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+            order by t.occurredAt desc, t.createdAt desc
+            """,
+            countQuery = """
+                    select count(t)
+                    from Transaction t
+                    where t.tenantId = :tenantId
+                      and t.walletId in :walletIds
+                      and t.walletId = coalesce(:walletId, t.walletId)
+                      and t.type = coalesce(:type, t.type)
+                      and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
+                      and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+                    """)
+    Page<TransactionReadProjection> findAllByTenantIdAndWalletIdInForRead(@Param("tenantId") UUID tenantId,
+                                                                           @Param("walletIds") List<UUID> walletIds,
+                                                                           @Param("walletId") @Nullable UUID walletId,
+                                                                           @Param("type") @Nullable TransactionType type,
+                                                                           @Param("dateFrom") @Nullable LocalDateTime dateFrom,
+                                                                           @Param("dateTo") @Nullable LocalDateTime dateTo,
+                                                                           Pageable pageable);
 
     @Query("""
             select

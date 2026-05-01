@@ -2,6 +2,7 @@ package com.wallet.walletapp.transaction;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.common.TenantContext;
+import com.wallet.walletapp.common.dto.PageResponse;
 import com.wallet.walletapp.exception.BusinessException;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
@@ -20,16 +21,20 @@ import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -84,20 +89,41 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<TransactionReadResponse> getAllTransactions(@Nullable UUID walletId, @Nullable TransactionType type,
-                                                            @Nullable LocalDateTime dateFrom, @Nullable LocalDateTime dateTo) {
+    public PageResponse<TransactionReadResponse> getAllTransactions(@Nullable UUID walletId,
+                                                                    @Nullable TransactionType type,
+                                                                    @Nullable LocalDateTime dateFrom,
+                                                                    @Nullable LocalDateTime dateTo,
+                                                                    int page,
+                                                                    int size) {
         UserPrincipal user = currentUser();
         UUID tenantId = user.getTenantId();
+        Pageable pageable = buildPageable(page, size);
+        Page<TransactionReadProjection> transactions;
 
         if (user.getRole() == Role.SYSTEM_ADMIN) {
-            return transactionRepository.findAllForRead(walletId, type, dateFrom, dateTo).stream()
-                    .map(transactionMapper::toReadResponse)
-                    .collect(Collectors.toList());
+            transactions = transactionRepository.findAllForRead(walletId, type, dateFrom, dateTo, pageable);
+        } else if (user.getRole() == Role.USER) {
+            List<UUID> accessibleWalletIds = userWalletAccessService.getAccessibleWalletIds(user);
+            if (accessibleWalletIds.isEmpty()) {
+                return PageResponse.from(new PageImpl<>(Collections.emptyList(), pageable, 0));
+            }
+            if (walletId != null && !accessibleWalletIds.contains(walletId)) {
+                return PageResponse.from(new PageImpl<>(Collections.emptyList(), pageable, 0));
+            }
+            transactions = transactionRepository.findAllByTenantIdAndWalletIdInForRead(
+                    tenantId,
+                    accessibleWalletIds,
+                    walletId,
+                    type,
+                    dateFrom,
+                    dateTo,
+                    pageable
+            );
         } else {
-            return transactionRepository.findAllByTenantIdForRead(tenantId, walletId, type, dateFrom, dateTo).stream()
-                    .map(transactionMapper::toReadResponse)
-                    .collect(Collectors.toList());
+            transactions = transactionRepository.findAllByTenantIdForRead(tenantId, walletId, type, dateFrom, dateTo, pageable);
         }
+
+        return PageResponse.from(transactions.map(transactionMapper::toReadResponse));
     }
 
     @Override
@@ -173,5 +199,11 @@ public class TransactionServiceImpl implements TransactionService {
             wallet.setBalance(wallet.getBalance().subtract(transaction.getAmount()));
             wallet.setWalletProfit(wallet.getWalletProfit().add(transaction.getPercent()));
         }
+    }
+
+    private Pageable buildPageable(int page, int size) {
+        int resolvedPage = Math.max(page, 0);
+        int resolvedSize = Math.min(Math.max(size, 1), 100);
+        return PageRequest.of(resolvedPage, resolvedSize);
     }
 }
