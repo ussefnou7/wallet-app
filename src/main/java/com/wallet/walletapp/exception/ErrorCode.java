@@ -31,7 +31,8 @@ public enum ErrorCode {
     FILE_TOO_LARGE("FILE_TOO_LARGE", "Uploaded file exceeds the allowed size", HttpStatus.BAD_REQUEST),
     FILE_UPLOAD_FAILED("FILE_UPLOAD_FAILED", "File upload failed", HttpStatus.BAD_GATEWAY),
     DATA_CONFLICT("DATA_CONFLICT", "The request conflicts with existing data", HttpStatus.CONFLICT),
-    INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR);
+    INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", "An unexpected error occurred. Please try again later.", HttpStatus.INTERNAL_SERVER_ERROR),
+    INVALID_AMOUNT("INVALID_AMOUNT", "Amount is invalid", HttpStatus.BAD_REQUEST), WALLET_PROFIT_COLLECTION_EXCEEDS_AVAILABLE("WALLET_PROFIT_COLLECTION_EXCEEDS_AVAILABLE", "Wallet profit collection amount exceeds available profit", HttpStatus.BAD_REQUEST), CASH_PROFIT_COLLECTION_EXCEEDS_AVAILABLE("CASH_PROFIT_COLLECTION_EXCEEDS_AVAILABLE", "Cash profit collection amount exceeds available profit", HttpStatus.BAD_REQUEST);
 
     private final String code;
     private final String defaultMessage;

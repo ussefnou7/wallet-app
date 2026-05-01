@@ -1,9 +1,11 @@
 package com.wallet.walletapp.wallet;
 
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -276,7 +278,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
               and w.active = true
             """)
     DashboardWalletMetricsProjection getActiveDashboardMetricsByTenantIdAndWalletIdIn(@Param("tenantId") UUID tenantId,
-                                                                                       @Param("walletIds") List<UUID> walletIds);
+                                                                                      @Param("walletIds") List<UUID> walletIds);
 
     @Query("""
             select w.id
@@ -289,4 +291,15 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                                               @Param("branchIds") List<UUID> branchIds);
 
     long countByTenantId(UUID tenantId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+                select w from Wallet w
+                where w.id = :walletId
+                and w.tenantId = :tenantId
+            """)
+    Optional<Wallet> findByIdAndTenantIdForUpdate(
+            @Param("walletId") UUID walletId,
+            @Param("tenantId") UUID tenantId
+    );
 }
