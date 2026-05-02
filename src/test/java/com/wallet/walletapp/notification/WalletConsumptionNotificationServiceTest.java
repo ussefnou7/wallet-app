@@ -5,7 +5,7 @@ import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.user.User;
 import com.wallet.walletapp.user.UserRepository;
 import com.wallet.walletapp.wallet.Wallet;
-import com.wallet.walletapp.wallet.WalletConsumption;
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.api.BeforeEach;

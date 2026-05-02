@@ -10,8 +10,8 @@ import com.wallet.walletapp.transaction.dto.TransactionReadResponse;
 import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.Wallet;
-import com.wallet.walletapp.wallet.WalletConsumption;
-import com.wallet.walletapp.wallet.WalletConsumptionService;
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
+import com.wallet.walletapp.wallet.consumption.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
 import com.wallet.walletapp.wallet.WalletType;
 import com.wallet.walletapp.wallet.UserWalletAccessService;
@@ -101,10 +101,11 @@ class TransactionServiceImplTest {
                 Pageable.ofSize(20),
                 1
         );
-        when(transactionRepository.findAllByTenantIdForRead(eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+        when(transactionRepository.findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
                 .thenReturn(transactionPage);
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, 0, 20);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, null, 0, 20);
 
         assertEquals(1, result.content().size());
         assertEquals(walletId, result.content().getFirst().getWalletId());
@@ -122,7 +123,8 @@ class TransactionServiceImplTest {
                 eq(null),
                 eq(null),
                 eq(null),
-                argThat(pageable -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 20)
+                eq(null),
+                argThat((Pageable pageable) -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 20)
         );
         verifyNoInteractions(walletRepository);
     }
@@ -131,10 +133,11 @@ class TransactionServiceImplTest {
     void getAllTransactionsCapsSizeAt100() {
         authenticate(Role.OWNER);
 
-        when(transactionRepository.findAllByTenantIdForRead(eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+        when(transactionRepository.findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
                 .thenReturn(Page.empty(Pageable.ofSize(100)));
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, 0, 500);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, null, 0, 500);
 
         assertEquals(100, result.size());
         verify(transactionRepository).findAllByTenantIdForRead(
@@ -143,7 +146,8 @@ class TransactionServiceImplTest {
                 eq(null),
                 eq(null),
                 eq(null),
-                argThat(pageable -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 100)
+                eq(null),
+                argThat((Pageable pageable) -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 100)
         );
     }
 
@@ -151,10 +155,11 @@ class TransactionServiceImplTest {
     void getAllTransactionsTreatsNegativePageAsZero() {
         authenticate(Role.OWNER);
 
-        when(transactionRepository.findAllByTenantIdForRead(eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+        when(transactionRepository.findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
                 .thenReturn(Page.empty(Pageable.ofSize(10)));
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, -3, 10);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, null, -3, 10);
 
         assertEquals(0, result.page());
         assertEquals(10, result.size());
@@ -164,61 +169,60 @@ class TransactionServiceImplTest {
                 eq(null),
                 eq(null),
                 eq(null),
-                argThat(pageable -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 10)
+                eq(null),
+                argThat((Pageable pageable) -> pageable.getPageNumber() == 0 && pageable.getPageSize() == 10)
         );
     }
 
     @Test
-    void getAllTransactionsUsesAccessibleWalletsForUser() {
+    void getAllTransactionsUsesCurrentUserAsCreatedByFilterForUser() {
         authenticate(Role.USER);
 
         UUID walletId = UUID.randomUUID();
-        when(userWalletAccessService.getAccessibleWalletIds(any(UserPrincipal.class))).thenReturn(List.of(walletId));
-        when(transactionRepository.findAllByTenantIdAndWalletIdInForRead(
-                eq(TENANT_ID), eq(List.of(walletId)), eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+        when(transactionRepository.findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(USER_ID), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(
                         List.of(projection(UUID.randomUUID(), walletId, "Assigned Wallet", "owner-user")),
                         Pageable.ofSize(20),
                         1
                 ));
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, 0, 20);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, UUID.randomUUID(), 0, 20);
 
         assertEquals(1, result.content().size());
         assertEquals(walletId, result.content().getFirst().getWalletId());
-        verify(transactionRepository).findAllByTenantIdAndWalletIdInForRead(
-                eq(TENANT_ID), eq(List.of(walletId)), eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
+        verify(transactionRepository).findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(USER_ID), any(Pageable.class));
+        verifyNoInteractions(userWalletAccessService);
     }
 
     @Test
-    void getAllTransactionsReturnsEmptyPageForUserWithoutAccessibleWallets() {
-        authenticate(Role.USER);
+    void getAllTransactionsUsesProvidedCreatedByFilterForOwner() {
+        authenticate(Role.OWNER);
 
-        when(userWalletAccessService.getAccessibleWalletIds(any(UserPrincipal.class))).thenReturn(List.of());
+        UUID createdBy = UUID.randomUUID();
+        when(transactionRepository.findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(createdBy), any(Pageable.class)))
+                .thenReturn(Page.empty(Pageable.ofSize(20)));
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, 0, 20);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, createdBy, 0, 20);
 
-        assertTrue(result.content().isEmpty());
         assertEquals(0, result.totalElements());
-        assertEquals(0, result.totalPages());
-        assertTrue(result.last());
-        assertFalse(result.hasNext());
-        verifyNoInteractions(transactionRepository);
+        verify(transactionRepository).findAllByTenantIdForRead(
+                eq(TENANT_ID), eq(null), eq(null), eq(null), eq(null), eq(createdBy), any(Pageable.class));
     }
 
     @Test
-    void getAllTransactionsReturnsEmptyPageWhenUserFiltersInaccessibleWallet() {
-        authenticate(Role.USER);
+    void getAllTransactionsUsesGlobalReadForSystemAdmin() {
+        authenticate(Role.SYSTEM_ADMIN);
 
-        UUID accessibleWalletId = UUID.randomUUID();
-        UUID filteredWalletId = UUID.randomUUID();
-        when(userWalletAccessService.getAccessibleWalletIds(any(UserPrincipal.class))).thenReturn(List.of(accessibleWalletId));
+        when(transactionRepository.findAllForRead(eq(null), eq(null), eq(null), eq(null), any(Pageable.class)))
+                .thenReturn(Page.empty(Pageable.ofSize(20)));
 
-        PageResponse<TransactionReadResponse> result = service.getAllTransactions(filteredWalletId, null, null, null, 0, 20);
+        PageResponse<TransactionReadResponse> result = service.getAllTransactions(null, null, null, null, UUID.randomUUID(), 0, 20);
 
-        assertTrue(result.content().isEmpty());
         assertEquals(0, result.totalElements());
-        verifyNoInteractions(transactionRepository);
+        verify(transactionRepository).findAllForRead(eq(null), eq(null), eq(null), eq(null), any(Pageable.class));
     }
 
     @Test

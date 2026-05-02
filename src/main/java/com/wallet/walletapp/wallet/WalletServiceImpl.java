@@ -1,11 +1,14 @@
 package com.wallet.walletapp.wallet;
 
 import com.wallet.walletapp.auth.UserPrincipal;
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
+import com.wallet.walletapp.wallet.consumption.WalletConsumptionRepository;
+import com.wallet.walletapp.wallet.consumption.WalletConsumptionService;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.plan.SubscriptionAccessService;
+import com.wallet.walletapp.subscription.SubscriptionAccessService;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.wallet.dto.CreateWalletRequest;
 import com.wallet.walletapp.wallet.dto.UpdateWalletRequest;

@@ -2,7 +2,8 @@ package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.reporting.dto.ProfitSummaryDto;
+import com.wallet.walletapp.reporting.profit.ProfitSummaryDto;
+import com.wallet.walletapp.reporting.profit.ProfitSummaryReportServiceImpl;
 import com.wallet.walletapp.transaction.ProfitSummaryProjection;
 import com.wallet.walletapp.transaction.TransactionRepository;
 import com.wallet.walletapp.user.Role;

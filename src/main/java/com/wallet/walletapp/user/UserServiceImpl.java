@@ -10,7 +10,7 @@ import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.plan.SubscriptionAccessService;
+import com.wallet.walletapp.subscription.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;

@@ -1,6 +1,6 @@
 package com.wallet.walletapp.reporting.service;
 
-import com.wallet.walletapp.reporting.ReportPeriod;
+import com.wallet.walletapp.reporting.common.ReportPeriod;
 import com.wallet.walletapp.reporting.dto.TransactionTimeAggregationRowDto;
 import org.jspecify.annotations.Nullable;
 

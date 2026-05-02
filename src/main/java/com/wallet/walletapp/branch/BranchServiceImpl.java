@@ -7,7 +7,7 @@ import com.wallet.walletapp.branch.dto.BranchResponse;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.ErrorCode;
-import com.wallet.walletapp.plan.SubscriptionAccessService;
+import com.wallet.walletapp.subscription.SubscriptionAccessService;
 import com.wallet.walletapp.user.Role;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -32,11 +32,17 @@ public class TransactionController {
     public ResponseEntity<PageResponse<TransactionReadResponse>> getAllTransactions(
             @RequestParam(required = false) UUID walletId,
             @RequestParam(required = false) TransactionType type,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateTo,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime dateFrom,
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime dateTo,
+            @RequestParam(required = false) UUID createdBy,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return ResponseEntity.ok(transactionService.getAllTransactions(walletId, type, dateFrom, dateTo, page, size));
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(transactionService.getAllTransactions(walletId, type, dateFrom, dateTo, createdBy, page, size));
     }
 
     @GetMapping("/{id}")

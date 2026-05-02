@@ -3,7 +3,7 @@ package com.wallet.walletapp.reporting.service;
 import com.wallet.walletapp.auth.UserPrincipal;
 import com.wallet.walletapp.exception.ErrorCode;
 import com.wallet.walletapp.exception.UnauthorizedException;
-import com.wallet.walletapp.reporting.ReportPeriod;
+import com.wallet.walletapp.reporting.common.ReportPeriod;
 import com.wallet.walletapp.reporting.dto.TransactionTimeAggregationRowDto;
 import com.wallet.walletapp.transaction.TransactionRepository;
 import com.wallet.walletapp.transaction.TransactionTimeAggregationProjection;

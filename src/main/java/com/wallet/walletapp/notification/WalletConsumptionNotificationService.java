@@ -6,7 +6,7 @@ import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.user.User;
 import com.wallet.walletapp.user.UserRepository;
 import com.wallet.walletapp.wallet.Wallet;
-import com.wallet.walletapp.wallet.WalletConsumption;
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

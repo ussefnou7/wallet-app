@@ -1,5 +1,6 @@
 package com.wallet.walletapp.wallet;
 
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
 import com.wallet.walletapp.wallet.dto.WalletResponse;
 import org.springframework.stereotype.Component;
 

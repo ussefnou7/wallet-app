@@ -1,7 +1,7 @@
 package com.wallet.walletapp.reporting;
 
-import com.wallet.walletapp.reporting.dto.BalanceReportResponse;
-import com.wallet.walletapp.reporting.dto.ProfitReportResponse;
+import com.wallet.walletapp.reporting.wallet.BalanceReportResponse;
+import com.wallet.walletapp.reporting.profit.ProfitReportResponse;
 
 import java.util.UUID;
 

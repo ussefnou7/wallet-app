@@ -1,7 +1,8 @@
 package com.wallet.walletapp.reporting.service;
 
 import com.wallet.walletapp.auth.UserPrincipal;
-import com.wallet.walletapp.reporting.dto.DashboardOverviewDto;
+import com.wallet.walletapp.reporting.dashboard.DashboardOverviewDto;
+import com.wallet.walletapp.reporting.dashboard.DashboardOverviewReportServiceImpl;
 import com.wallet.walletapp.transaction.TransactionRepository;
 import com.wallet.walletapp.transaction.TransactionSummaryProjection;
 import com.wallet.walletapp.user.Role;

@@ -1,6 +1,7 @@
 package com.wallet.walletapp.wallet;
 
 import com.wallet.walletapp.common.TenantAwareEntity;
+import com.wallet.walletapp.wallet.consumption.WalletConsumption;
 import jakarta.persistence.*;
 import lombok.*;
 

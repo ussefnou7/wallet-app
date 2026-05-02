@@ -1,6 +1,6 @@
 package com.wallet.walletapp.transaction;
 
-import com.wallet.walletapp.reporting.dto.TransactionReportReadModel;
+import com.wallet.walletapp.reporting.transaction.TransactionReportReadModel;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -17,9 +17,6 @@ import java.util.UUID;
 
 public interface TransactionRepository extends JpaRepository<Transaction, UUID>, JpaSpecificationExecutor<Transaction> {
 
-    List<Transaction> findByTenantId(UUID tenantId);
-
-    Optional<Transaction> findByIdAndTenantId(UUID id, UUID tenantId);
 
     Optional<Transaction> findByTenantIdAndExternalTransactionId(UUID tenantId, String externalTransactionId);
 
@@ -150,12 +147,13 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                 u.username as createdByUsername
             from Transaction t
             join Wallet w on w.id = t.walletId
-            left join User u on u.id = t.createdBy
+            join User u on u.id = t.createdBy
             where t.tenantId = :tenantId
-              and t.walletId = coalesce(:walletId, t.walletId)
-              and t.type = coalesce(:type, t.type)
+              and (:walletId IS NULL OR t.walletId = :walletId)
+              and (:type IS NULL OR t.type = :type)
               and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
               and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+              and (:createdBy is null or t.createdBy = :createdBy)
             order by t.occurredAt desc, t.createdAt desc
             """,
             countQuery = """
@@ -166,12 +164,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                       and t.type = coalesce(:type, t.type)
                       and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
                       and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+                      and (:createdBy is null or t.createdBy = :createdBy) 
+                      
                     """)
     Page<TransactionReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId,
                                                              @Param("walletId") @Nullable UUID walletId,
                                                              @Param("type") @Nullable TransactionType type,
                                                              @Param("dateFrom") @Nullable LocalDateTime dateFrom,
                                                              @Param("dateTo") @Nullable LocalDateTime dateTo,
+                                                             @Param("createdBy") @Nullable UUID createdBy,
                                                              Pageable pageable);
 
     @Query(value = """
@@ -194,13 +195,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                 u.username as createdByUsername
             from Transaction t
             join Wallet w on w.id = t.walletId
-            left join User u on u.id = t.createdBy
+            join User u on u.id = t.createdBy
             where t.tenantId = :tenantId
-              and t.walletId in :walletIds
-              and t.walletId = coalesce(:walletId, t.walletId)
-              and t.type = coalesce(:type, t.type)
-              and t.occurredAt >= coalesce(:dateFrom, t.occurredAt)
-              and t.occurredAt <= coalesce(:dateTo, t.occurredAt)
+              and (:walletId IS NULL OR t.walletId = :walletId)
+              and (:type IS NULL OR t.type = :type)
+              and (:dateFrom IS NULL OR t.occurredAt >= :dateFrom)
+              and (:dateTo IS NULL OR t.occurredAt <= :dateTo)
             order by t.occurredAt desc, t.createdAt desc
             """,
             countQuery = """
@@ -247,7 +247,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
     Optional<TransactionReadProjection> findReadByIdAndTenantId(@Param("id") UUID id, @Param("tenantId") UUID tenantId);
 
     @Query(value = """
-            select new com.wallet.walletapp.reporting.dto.TransactionReportReadModel(
+            select new com.wallet.walletapp.reporting.transaction.TransactionReportReadModel(
                 t.id,
                 t.tenantId,
                 tenant.name,
@@ -310,7 +310,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, UUID>,
                                                                      Pageable pageable);
 
     @Query(value = """
-            select new com.wallet.walletapp.reporting.dto.TransactionReportReadModel(
+            select new com.wallet.walletapp.reporting.transaction.TransactionReportReadModel(
                 t.id,
                 t.tenantId,
                 tenant.name,

@@ -17,6 +17,7 @@ public interface TransactionService {
                                                              @Nullable TransactionType type,
                                                              @Nullable LocalDateTime dateFrom,
                                                              @Nullable LocalDateTime dateTo,
+                                                             @Nullable UUID createdBy,
                                                              int page,
                                                              int size);
 

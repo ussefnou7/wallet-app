@@ -15,14 +15,13 @@ import com.wallet.walletapp.transaction.dto.TransactionResponse;
 import com.wallet.walletapp.user.Role;
 import com.wallet.walletapp.notification.WalletConsumptionNotificationService;
 import com.wallet.walletapp.wallet.Wallet;
-import com.wallet.walletapp.wallet.WalletConsumptionService;
+import com.wallet.walletapp.wallet.consumption.WalletConsumptionService;
 import com.wallet.walletapp.wallet.WalletRepository;
 import com.wallet.walletapp.wallet.UserWalletAccessService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.Nullable;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -31,8 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -93,6 +90,7 @@ public class TransactionServiceImpl implements TransactionService {
                                                                     @Nullable TransactionType type,
                                                                     @Nullable LocalDateTime dateFrom,
                                                                     @Nullable LocalDateTime dateTo,
+                                                                    @Nullable UUID createdBy,
                                                                     int page,
                                                                     int size) {
         UserPrincipal user = currentUser();
@@ -102,25 +100,14 @@ public class TransactionServiceImpl implements TransactionService {
 
         if (user.getRole() == Role.SYSTEM_ADMIN) {
             transactions = transactionRepository.findAllForRead(walletId, type, dateFrom, dateTo, pageable);
-        } else if (user.getRole() == Role.USER) {
-            List<UUID> accessibleWalletIds = userWalletAccessService.getAccessibleWalletIds(user);
-            if (accessibleWalletIds.isEmpty()) {
-                return PageResponse.from(new PageImpl<>(Collections.emptyList(), pageable, 0));
-            }
-            if (walletId != null && !accessibleWalletIds.contains(walletId)) {
-                return PageResponse.from(new PageImpl<>(Collections.emptyList(), pageable, 0));
-            }
-            transactions = transactionRepository.findAllByTenantIdAndWalletIdInForRead(
-                    tenantId,
-                    accessibleWalletIds,
-                    walletId,
-                    type,
-                    dateFrom,
-                    dateTo,
-                    pageable
-            );
         } else {
-            transactions = transactionRepository.findAllByTenantIdForRead(tenantId, walletId, type, dateFrom, dateTo, pageable);
+            UUID createdById = null;
+            if (user.getRole() == Role.USER)
+                createdById = user.getUserId();
+             else
+                createdById = createdBy;
+            transactions = transactionRepository.findAllByTenantIdForRead(tenantId, walletId, type, dateFrom, dateTo, createdById, pageable);
+
         }
 
         return PageResponse.from(transactions.map(transactionMapper::toReadResponse));
