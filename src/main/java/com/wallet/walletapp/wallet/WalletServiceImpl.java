@@ -17,8 +17,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -42,11 +40,7 @@ public class WalletServiceImpl implements WalletService {
     public WalletResponse createWallet(CreateWalletRequest request) {
         UserPrincipal user = currentUser();
         if (user.getRole() == Role.SYSTEM_ADMIN && request.getTenantId() == null) {
-            throw new BusinessValidationException(
-                    ErrorCode.BAD_REQUEST,
-                    "TenantId is required",
-                    Map.of("tenantId", "must not be null")
-            );
+            throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "TenantId is required", Map.of("tenantId", "must not be null"));
         }
         UUID tenantId = user.getRole() == Role.SYSTEM_ADMIN ? request.getTenantId() : user.getTenantId();
         subscriptionAccessService.validateValidSubscription(tenantId);
@@ -65,11 +59,7 @@ public class WalletServiceImpl implements WalletService {
         wallet = walletRepository.save(wallet);
         wallet.setConsumption(walletConsumptionService.createForWallet(wallet));
         log.info("Wallet '{}' created for tenant {}", wallet.getName(), wallet.getTenantId());
-        return walletMapper.toResponse(
-                walletRepository.findReadById(wallet.getId())
-                        .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found after create")),
-                wallet.getConsumption()
-        );
+        return walletMapper.toResponse(walletRepository.findReadById(wallet.getId()).orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found after create")), wallet.getConsumption());
     }
 
     @Override
@@ -99,8 +89,7 @@ public class WalletServiceImpl implements WalletService {
     @Transactional(readOnly = true)
     public WalletResponse getWalletById(UUID id) {
         Wallet wallet = withCurrentConsumption(findWalletWithAccess(id));
-        WalletReadProjection projection = walletRepository.findReadByIdAndTenantId(id, wallet.getTenantId())
-                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
+        WalletReadProjection projection = walletRepository.findReadByIdAndTenantId(id, wallet.getTenantId()).orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
         return walletMapper.toResponse(projection, wallet.getConsumption());
     }
 
@@ -113,19 +102,21 @@ public class WalletServiceImpl implements WalletService {
         wallet = walletRepository.save(wallet);
         log.info("Wallet {} updated", id);
         Wallet refreshedWallet = withCurrentConsumption(wallet);
-        return walletMapper.toResponse(
-                walletRepository.findReadById(refreshedWallet.getId())
-                        .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found after update")),
-                refreshedWallet.getConsumption()
-        );
+        return walletMapper.toResponse(walletRepository.findReadById(refreshedWallet.getId()).orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found after update")), refreshedWallet.getConsumption());
     }
 
     @Override
     @Transactional
     public void deleteWallet(UUID id) {
-        Wallet wallet = findWalletWithAccess(id);
-        walletRepository.delete(wallet);
-        log.info("Wallet {} deleted", id);
+        UserPrincipal user = currentUser();
+        if (user.getRole() == Role.SYSTEM_ADMIN) {
+            walletRepository.deleteById(id);
+            log.info("Wallet {} deleted", id);
+        } else {
+            Wallet wallet = findWalletWithAccess(id);
+            walletRepository.delete(wallet);
+            log.info("Wallet {} deleted", id);
+        }
     }
 
     @Override
@@ -142,17 +133,12 @@ public class WalletServiceImpl implements WalletService {
 
     private Wallet findWalletWithAccess(UUID walletId) {
         UserPrincipal user = currentUser();
-        Wallet wallet = walletRepository.findByIdAndTenantId(walletId, user.getTenantId())
-                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
+        Wallet wallet = walletRepository.findByIdAndTenantId(walletId, user.getTenantId()).orElseThrow(() -> new EntityNotFoundException(ErrorCode.WALLET_NOT_FOUND, "Wallet not found"));
 
         if (user.getRole() == Role.USER && !userWalletAccessService.hasAccessToWallet(user, walletId)) {
             throw new UnauthorizedException(ErrorCode.FORBIDDEN, "Access denied to wallet", Map.of("walletId", walletId));
         }
         return wallet;
-    }
-
-    private List<WalletResponse> getWalletsByTenantId(UUID tenantId) {
-        return toWalletResponses(walletRepository.findAllByTenantIdForRead(tenantId));
     }
 
     public List<WalletResponse> getWalletsByBranchId(UUID branchId) {
@@ -185,11 +171,7 @@ public class WalletServiceImpl implements WalletService {
         int resolvedPage = page != null ? page : 0;
         int resolvedSize = size != null ? size : 20;
         if (resolvedPage < 0 || resolvedSize < 1) {
-            throw new BusinessValidationException(
-                    ErrorCode.BAD_REQUEST,
-                    "Invalid pagination parameters",
-                    Map.of("page", resolvedPage, "size", resolvedSize)
-            );
+            throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "Invalid pagination parameters", Map.of("page", resolvedPage, "size", resolvedSize));
         }
         return PageRequest.of(resolvedPage, resolvedSize);
     }

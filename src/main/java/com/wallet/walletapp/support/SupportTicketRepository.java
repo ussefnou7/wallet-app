@@ -18,6 +18,7 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdBy as createdBy,
                 t.subject as subject,
                 t.description as description,
+                t.type as type,
                 t.priority as priority,
                 t.status as status,
                 t.createdAt as createdAt,
@@ -41,6 +42,7 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdBy as createdBy,
                 t.subject as subject,
                 t.description as description,
+                t.type as type,
                 t.priority as priority,
                 t.status as status,
                 t.createdAt as createdAt,
@@ -65,6 +67,32 @@ public interface SupportTicketRepository extends JpaRepository<SupportTicket, UU
                 t.createdBy as createdBy,
                 t.subject as subject,
                 t.description as description,
+                t.type as type,
+                t.priority as priority,
+                t.status as status,
+                t.createdAt as createdAt,
+                t.updatedAt as updatedAt,
+                t.resolvedAt as resolvedAt,
+                t.resolvedBy as resolvedBy,
+                tenant.name as tenantName,
+                creator.username as createdByName
+            from SupportTicket t
+                   join Tenant tenant on tenant.id = t.tenantId
+                   join User creator on creator.id = t.createdBy
+            where t.tenantId = :tenantId
+            and t.createdBy = coalesce(:userId, t.createdBy)
+            order by t.createdAt desc
+            """)
+    List<SupportTicketReadProjection> findAllByTenantIdAndUserIdForRead(@Param("tenantId") UUID tenantId,@Param("userId") UUID userId);
+
+    @Query("""
+            select
+                t.id as id,
+                t.tenantId as tenantId,
+                t.createdBy as createdBy,
+                t.subject as subject,
+                t.description as description,
+                t.type as type,
                 t.priority as priority,
                 t.status as status,
                 t.createdAt as createdAt,

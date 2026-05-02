@@ -5,6 +5,7 @@ import com.wallet.walletapp.branch.Branch;
 import com.wallet.walletapp.branch.BranchRepository;
 import com.wallet.walletapp.branch.BranchUser;
 import com.wallet.walletapp.branch.BranchUserRepository;
+import com.wallet.walletapp.common.dto.MessageResponse;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
 import com.wallet.walletapp.exception.ErrorCode;
@@ -12,8 +13,8 @@ import com.wallet.walletapp.exception.UnauthorizedException;
 import com.wallet.walletapp.plan.SubscriptionAccessService;
 import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
-import com.wallet.walletapp.user.dto.ChangePasswordRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
+import com.wallet.walletapp.user.dto.ResetUserPasswordRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
 import lombok.RequiredArgsConstructor;
@@ -47,7 +48,19 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(UUID userId) {
-
+        UserPrincipal user = currentUser();
+        if(user.getRole() == Role.SYSTEM_ADMIN) {
+            userRepository.deleteById(userId);
+        } else if(user.getRole() == Role.OWNER) {
+            User userToDelete = userRepository.findById(userId)
+                    .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+            if (!Objects.equals(user.getTenantId(), userToDelete.getTenantId())) {
+                throw new UnauthorizedException("Not authorized");
+            }
+        }
+        else {
+            throw new UnauthorizedException("Only system admin can delete users");
+        }
     }
 
     @Override
@@ -130,27 +143,6 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
-    public Map<String, String> changePassword(ChangePasswordRequest request) {
-        UserPrincipal currentUser = currentUser();
-        User user = userRepository.findById(currentUser.getUserId())
-                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
-
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
-            throw new BusinessValidationException(
-                    ErrorCode.BAD_REQUEST,
-                    "Current password is invalid",
-                    Map.of("currentPassword", "Current password is invalid")
-            );
-        }
-
-        validatePasswordConfirmation(request.getNewPassword(), request.getConfirmPassword());
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
-        return Map.of("message", "Password changed successfully");
-    }
-
-    @Override
-    @Transactional
     public UserResponse assignUserToBranch(UUID userId, AssignBranchRequest request) {
         if (request == null || request.getBranchId() == null) {
             throw new BusinessValidationException(
@@ -175,7 +167,7 @@ public class UserServiceImpl implements UserService {
         List<BranchUser> assignments = branchUserRepository.findAllByUserIdAndTenantId(user.getId(), user.getTenantId());
         if (!assignments.isEmpty()) {
             boolean alreadyAssignedToRequestedBranch = assignments.size() == 1
-                    && branch.getId().equals(assignments.get(0).getBranchId());
+                    && branch.getId().equals(assignments.getFirst().getBranchId());
             if (alreadyAssignedToRequestedBranch) {
                 return findUserResponse(user.getId());
             }
@@ -206,6 +198,28 @@ public class UserServiceImpl implements UserService {
 
         branchUserRepository.deleteAllByUserIdAndTenantId(user.getId(), user.getTenantId());
         log.info("Branch assignment removed for user {}", user.getId());
+    }
+
+    @Override
+    @Transactional
+    public MessageResponse resetUserPassword(UUID userId, ResetUserPasswordRequest request) {
+        UserPrincipal currentUser = currentUser();
+        if (currentUser.getRole() != Role.OWNER) {
+            throw new UnauthorizedException("Not authorized");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException(ErrorCode.USER_NOT_FOUND, "User not found"));
+
+        if (user.getRole() != Role.USER) {
+            throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "Owner can reset password only for USER accounts");
+        }
+
+        validateCanManageTenant(currentUser, user.getTenantId());
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
+        // TODO invalidate active tokens when token blacklist or refresh token support is added.
+        return new MessageResponse("Password reset successfully");
     }
 
     public UserResponse createOwner(CreateUserRequest request) {
@@ -309,16 +323,6 @@ public class UserServiceImpl implements UserService {
     private void validateSameTenant(User user, Branch branch) {
         if (!Objects.equals(user.getTenantId(), branch.getTenantId())) {
             throw new BusinessValidationException(ErrorCode.BAD_REQUEST, "User and branch must belong to the same tenant");
-        }
-    }
-
-    private void validatePasswordConfirmation(String newPassword, String confirmPassword) {
-        if (!Objects.equals(newPassword, confirmPassword)) {
-            throw new BusinessValidationException(
-                    ErrorCode.BAD_REQUEST,
-                    "Password confirmation does not match",
-                    Map.of("confirmPassword", "Password confirmation does not match")
-            );
         }
     }
 

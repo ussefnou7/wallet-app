@@ -39,6 +39,11 @@ public class SupportTicket extends TenantAwareEntity {
     private String description;
 
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 40)
+    @Builder.Default
+    private SupportTicketType type = SupportTicketType.GENERAL;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     @Builder.Default
     private SupportTicketPriority priority = SupportTicketPriority.MEDIUM;

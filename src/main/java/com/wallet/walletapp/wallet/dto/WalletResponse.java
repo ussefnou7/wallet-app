@@ -30,4 +30,6 @@ public class WalletResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private WalletType type;
+    private String collectedByName;
+    private LocalDateTime collectedAt;
 }

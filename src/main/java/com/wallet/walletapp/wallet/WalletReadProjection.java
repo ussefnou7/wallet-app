@@ -37,4 +37,8 @@ public interface WalletReadProjection {
     LocalDateTime getUpdatedAt();
 
     WalletType getType();
+
+    LocalDateTime getCollectedAt();
+
+    String getCollectedByName();
 }

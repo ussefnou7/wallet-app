@@ -34,37 +34,53 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 w.active as active,
                 w.createdAt as createdAt,
                 w.updatedAt as updatedAt,
-                w.type as type
+                w.type as type,
+                pc.collectedAt as collectedAt,
+                 u.username as collectedByName
             from Wallet w
             join Tenant t on t.id = w.tenantId
             left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
+            left join ProfitCollection pc on pc.id = (
+                     select p2.id  from ProfitCollection p2
+                     where p2.walletId = w.id
+                     order by p2.collectedAt desc
+                     limit 1  )
+            left join User u on u.id = pc.collectedBy
             order by w.tenantId, w.id
             """)
     List<WalletReadProjection> findAllForRead();
 
     @Query("""
-            select
-                w.id as id,
-                w.tenantId as tenantId,
-                t.name as tenantName,
-                w.branchId as branchId,
-                b.name as branchName,
-                w.name as name,
-                w.number as number,
-                w.balance as balance,
-                w.walletProfit as walletProfit,
-                w.cashProfit as cashProfit,
-                w.dailyLimit as dailyLimit,
-                w.monthlyLimit as monthlyLimit,
-                w.active as active,
-                w.createdAt as createdAt,
-                w.updatedAt as updatedAt,
-                w.type as type
-            from Wallet w
-            join Tenant t on t.id = w.tenantId
-            left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
-            where w.tenantId = :tenantId
-            order by w.tenantId, w.id
+             select
+                 w.id as id,
+                 w.tenantId as tenantId,
+                 t.name as tenantName,
+                 w.branchId as branchId,
+                 b.name as branchName,
+                 w.name as name,
+                 w.number as number,
+                 w.balance as balance,
+                 w.walletProfit as walletProfit,
+                 w.cashProfit as cashProfit,
+                 w.dailyLimit as dailyLimit,
+                 w.monthlyLimit as monthlyLimit,
+                 w.active as active,
+                 w.createdAt as createdAt,
+                 w.updatedAt as updatedAt,
+                 w.type as type,
+                 pc.collectedAt as collectedAt,
+                 u.username as collectedByName
+             from Wallet w
+             join Tenant t on t.id = w.tenantId
+             left join Branch b on b.id = w.branchId and b.tenantId = w.tenantId
+             left join ProfitCollection pc on pc.id = (
+                     select p2.id  from ProfitCollection p2
+                     where p2.walletId = w.id
+                     order by p2.collectedAt desc
+                     limit 1  )
+            left join User u on u.id = pc.collectedBy
+             where w.tenantId = :tenantId
+             order by w.tenantId, w.id
             """)
     List<WalletReadProjection> findAllByTenantIdForRead(@Param("tenantId") UUID tenantId);
 
@@ -277,8 +293,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
               and w.id in :walletIds
               and w.active = true
             """)
-    DashboardWalletMetricsProjection getActiveDashboardMetricsByTenantIdAndWalletIdIn(@Param("tenantId") UUID tenantId,
-                                                                                      @Param("walletIds") List<UUID> walletIds);
+    DashboardWalletMetricsProjection getActiveDashboardMetricsByTenantIdAndWalletIdIn(@Param("tenantId") UUID tenantId, @Param("walletIds") List<UUID> walletIds);
 
     @Query("""
             select w.id
@@ -287,8 +302,7 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
               and w.branchId in :branchIds
             order by w.id
             """)
-    List<UUID> findIdsByTenantIdAndBranchIdIn(@Param("tenantId") UUID tenantId,
-                                              @Param("branchIds") List<UUID> branchIds);
+    List<UUID> findIdsByTenantIdAndBranchIdIn(@Param("tenantId") UUID tenantId, @Param("branchIds") List<UUID> branchIds);
 
     long countByTenantId(UUID tenantId);
 
@@ -298,8 +312,5 @@ public interface WalletRepository extends JpaRepository<Wallet, UUID> {
                 where w.id = :walletId
                 and w.tenantId = :tenantId
             """)
-    Optional<Wallet> findByIdAndTenantIdForUpdate(
-            @Param("walletId") UUID walletId,
-            @Param("tenantId") UUID tenantId
-    );
+    Optional<Wallet> findByIdAndTenantIdForUpdate(@Param("walletId") UUID walletId, @Param("tenantId") UUID tenantId);
 }

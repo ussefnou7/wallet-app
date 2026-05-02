@@ -2,6 +2,7 @@ package com.wallet.walletapp.support.dto;
 
 import com.wallet.walletapp.support.SupportTicketPriority;
 import com.wallet.walletapp.support.SupportTicketStatus;
+import com.wallet.walletapp.support.SupportTicketType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,6 +20,7 @@ public class SupportTicketResponse {
     private UUID createdBy;
     private String subject;
     private String description;
+    private SupportTicketType type;
     private SupportTicketPriority priority;
     private SupportTicketStatus status;
     private LocalDateTime createdAt;

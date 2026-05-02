@@ -10,4 +10,6 @@ public class UserResponse {
     private String username;
     private String role;
     private String tenantName;
+    private boolean active;
+    private String branchName;
 }

@@ -15,6 +15,8 @@ public interface SupportTicketReadProjection {
 
     String getDescription();
 
+    SupportTicketType getType();
+
     SupportTicketPriority getPriority();
 
     SupportTicketStatus getStatus();

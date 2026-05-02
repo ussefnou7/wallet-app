@@ -69,6 +69,7 @@ class SupportTicketServiceImplTest {
         assertEquals(TENANT_ID, response.getTenantId());
         assertEquals(OWNER_ID, response.getCreatedBy());
         assertEquals("Payment issue", response.getSubject());
+        assertEquals(SupportTicketType.GENERAL, response.getType());
         assertEquals(SupportTicketPriority.HIGH, response.getPriority());
         assertEquals(SupportTicketStatus.OPEN, response.getStatus());
         ArgumentCaptor<SupportTicket> ticketCaptor = ArgumentCaptor.forClass(SupportTicket.class);
@@ -76,6 +77,7 @@ class SupportTicketServiceImplTest {
         SupportTicket persisted = ticketCaptor.getValue();
         assertEquals(TENANT_ID, persisted.getTenantId());
         assertEquals(OWNER_ID, persisted.getCreatedBy());
+        assertEquals(SupportTicketType.GENERAL, persisted.getType());
     }
 
     @Test
@@ -94,6 +96,7 @@ class SupportTicketServiceImplTest {
         SupportTicketResponse response = service.createTicket(request);
 
         assertEquals(ticketId, response.getTicketId());
+        assertEquals(SupportTicketType.GENERAL, response.getType());
         assertEquals(SupportTicketPriority.MEDIUM, response.getPriority());
         verify(supportTicketRepository).save(any(SupportTicket.class));
     }
@@ -128,6 +131,7 @@ class SupportTicketServiceImplTest {
         ticket.setCreatedBy(OWNER_ID);
         ticket.setSubject("Subject");
         ticket.setDescription("Description");
+        ticket.setType(SupportTicketType.GENERAL);
         ticket.setPriority(priority);
         ticket.setStatus(status);
         ticket.setCreatedAt(LocalDateTime.of(2026, 4, 25, 15, 0));

@@ -20,6 +20,8 @@ public class UserMapper {
         response.setUsername(projection.getUsername());
         response.setRole(projection.getRole().name());
         response.setTenantName(projection.getTenantName());
+        response.setActive(projection.getActive());
+        response.setBranchName(projection.getBranchName());
         return response;
     }
 }

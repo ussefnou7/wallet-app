@@ -1,8 +1,9 @@
 package com.wallet.walletapp.user;
 
+import com.wallet.walletapp.common.dto.MessageResponse;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
-import com.wallet.walletapp.user.dto.ChangePasswordRequest;
 import com.wallet.walletapp.user.dto.CreateUserRequest;
+import com.wallet.walletapp.user.dto.ResetUserPasswordRequest;
 import com.wallet.walletapp.user.dto.UpdateUserRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
 import jakarta.validation.Valid;
@@ -13,7 +14,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -42,11 +42,6 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
-    @PatchMapping("/me/password")
-    public ResponseEntity<Map<String, String>> changeOwnPassword(@Valid @RequestBody ChangePasswordRequest request) {
-        return ResponseEntity.ok(userService.changePassword(request));
-    }
-
     @PutMapping("/{userId}/assign-branch")
     @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     public ResponseEntity<UserResponse> assignBranch(
@@ -62,7 +57,16 @@ public class UserController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/{userId}/reset-password")
+    @PreAuthorize("hasRole('OWNER')")
+    public ResponseEntity<MessageResponse> resetUserPassword(
+            @PathVariable UUID userId,
+            @Valid @RequestBody ResetUserPasswordRequest request) {
+        return ResponseEntity.ok(userService.resetUserPassword(userId, request));
+    }
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('OWNER', 'SYSTEM_ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();

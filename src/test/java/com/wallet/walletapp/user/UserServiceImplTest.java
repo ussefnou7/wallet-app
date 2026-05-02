@@ -7,10 +7,8 @@ import com.wallet.walletapp.branch.BranchUser;
 import com.wallet.walletapp.branch.BranchUserRepository;
 import com.wallet.walletapp.exception.BusinessValidationException;
 import com.wallet.walletapp.exception.EntityNotFoundException;
-import com.wallet.walletapp.plan.SubscriptionAccessService;
-import com.wallet.walletapp.tenant.TenantRepository;
 import com.wallet.walletapp.user.dto.AssignBranchRequest;
-import com.wallet.walletapp.user.dto.ChangePasswordRequest;
+import com.wallet.walletapp.user.dto.ResetUserPasswordRequest;
 import com.wallet.walletapp.user.dto.UserResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -182,55 +180,55 @@ class UserServiceImplTest {
     }
 
     @Test
-    void changeOwnPasswordUpdatesEncodedPassword() {
-        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
-        User user = user(currentUserId, TENANT_ID, Role.USER);
-        user.setPassword("encoded-old");
+    void ownerCanResetUserPasswordInSameTenant() {
+        authenticate(Role.OWNER, TENANT_ID);
 
-        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("oldPass123", "encoded-old")).thenReturn(true);
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, TENANT_ID, Role.USER);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(passwordEncoder.encode("newPass123")).thenReturn("encoded-new");
 
-        var result = userService.changePassword(changeOwnPasswordRequest("oldPass123", "newPass123", "newPass123"));
+        var result = userService.resetUserPassword(userId, new ResetUserPasswordRequest("newPass123"));
 
-        assertEquals("Password changed successfully", result.get("message"));
+        assertEquals("Password reset successfully", result.message());
         assertEquals("encoded-new", user.getPassword());
         verify(userRepository).save(user);
     }
 
     @Test
-    void changeOwnPasswordRejectsInvalidCurrentPassword() {
-        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
-        User user = user(currentUserId, TENANT_ID, Role.USER);
-        user.setPassword("encoded-old");
+    void ownerCannotResetOwnerPassword() {
+        authenticate(Role.OWNER, TENANT_ID);
 
-        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("wrongPass123", "encoded-old")).thenReturn(false);
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, TENANT_ID, Role.OWNER);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         BusinessValidationException ex = assertThrows(
                 BusinessValidationException.class,
-                () -> userService.changePassword(changeOwnPasswordRequest("wrongPass123", "newPass123", "newPass123"))
+                () -> userService.resetUserPassword(userId, new ResetUserPasswordRequest("newPass123"))
         );
 
-        assertEquals("Current password is invalid", ex.getMessage());
+        assertEquals("Owner can reset password only for USER accounts", ex.getMessage());
         verify(userRepository, never()).save(any());
     }
 
     @Test
-    void changeOwnPasswordRejectsPasswordMismatch() {
-        UUID currentUserId = authenticate(Role.USER, TENANT_ID);
-        User user = user(currentUserId, TENANT_ID, Role.USER);
-        user.setPassword("encoded-old");
+    void ownerCannotResetSystemAdminPassword() {
+        authenticate(Role.OWNER, TENANT_ID);
 
-        when(userRepository.findById(currentUserId)).thenReturn(Optional.of(user));
-        when(passwordEncoder.matches("oldPass123", "encoded-old")).thenReturn(true);
+        UUID userId = UUID.randomUUID();
+        User user = user(userId, OTHER_TENANT_ID, Role.SYSTEM_ADMIN);
+
+        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
 
         BusinessValidationException ex = assertThrows(
                 BusinessValidationException.class,
-                () -> userService.changePassword(changeOwnPasswordRequest("oldPass123", "newPass123", "different123"))
+                () -> userService.resetUserPassword(userId, new ResetUserPasswordRequest("newPass123"))
         );
 
-        assertEquals("Password confirmation does not match", ex.getMessage());
+        assertEquals("Owner can reset password only for USER accounts", ex.getMessage());
         verify(userRepository, never()).save(any());
     }
 
@@ -245,14 +243,6 @@ class UserServiceImplTest {
     private AssignBranchRequest assignBranchRequest(UUID branchId) {
         AssignBranchRequest request = new AssignBranchRequest();
         request.setBranchId(branchId);
-        return request;
-    }
-
-    private ChangePasswordRequest changeOwnPasswordRequest(String currentPassword, String newPassword, String confirmPassword) {
-        ChangePasswordRequest request = new ChangePasswordRequest();
-        request.setCurrentPassword(currentPassword);
-        request.setNewPassword(newPassword);
-        request.setConfirmPassword(confirmPassword);
         return request;
     }
 

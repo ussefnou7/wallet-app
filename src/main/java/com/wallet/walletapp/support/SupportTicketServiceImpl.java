@@ -30,12 +30,12 @@ public class SupportTicketServiceImpl implements SupportTicketService {
     @Transactional
     public SupportTicketResponse createTicket(CreateSupportTicketRequest request) {
         UserPrincipal user = currentUser();
-        requireRole(user, Role.OWNER);
 
         SupportTicket ticket = SupportTicket.builder()
                 .createdBy(user.getUserId())
                 .subject(request.getSubject().trim())
                 .description(request.getDescription().trim())
+                .type(request.getType() != null ? request.getType() : SupportTicketType.GENERAL)
                 .priority(request.getPriority() != null ? request.getPriority() : SupportTicketPriority.MEDIUM)
                 .status(SupportTicketStatus.OPEN)
                 .build();
@@ -51,9 +51,8 @@ public class SupportTicketServiceImpl implements SupportTicketService {
     @Transactional(readOnly = true)
     public List<SupportTicketResponse> getMyTickets() {
         UserPrincipal user = currentUser();
-        requireRole(user, Role.OWNER);
 
-        List<SupportTicketReadProjection> tickets = supportTicketRepository.findAllByTenantIdForRead(user.getTenantId());
+        List<SupportTicketReadProjection> tickets = supportTicketRepository.findAllByTenantIdAndUserIdForRead(user.getTenantId(),user.getUserId());
         return tickets.stream()
                 .map(supportTicketMapper::toResponse)
                 .toList();
@@ -63,7 +62,6 @@ public class SupportTicketServiceImpl implements SupportTicketService {
     @Transactional(readOnly = true)
     public SupportTicketResponse getMyTicket(UUID ticketId) {
         UserPrincipal user = currentUser();
-        requireRole(user, Role.OWNER);
 
         SupportTicketReadProjection ticket = supportTicketRepository.findByIdAndTenantIdForRead(ticketId, user.getTenantId())
                 .orElseThrow(() -> new EntityNotFoundException(ErrorCode.SUPPORT_TICKET_NOT_FOUND, "Support ticket not found"));

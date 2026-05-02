@@ -11,4 +11,8 @@ public interface UserReadProjection {
     Role getRole();
 
     String getTenantName();
+
+    boolean getActive();
+    
+    String getBranchName();
 }

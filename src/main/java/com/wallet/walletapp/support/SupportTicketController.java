@@ -25,19 +25,16 @@ public class SupportTicketController {
     private final SupportTicketService supportTicketService;
 
     @PostMapping("/api/v1/support/tickets")
-    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<SupportTicketResponse> createTicket(@Valid @RequestBody CreateSupportTicketRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(supportTicketService.createTicket(request));
     }
 
     @GetMapping("/api/v1/support/tickets/my")
-    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<List<SupportTicketResponse>> getMyTickets() {
         return ResponseEntity.ok(supportTicketService.getMyTickets());
     }
 
     @GetMapping("/api/v1/support/tickets/{ticketId}")
-    @PreAuthorize("hasRole('OWNER')")
     public ResponseEntity<SupportTicketResponse> getMyTicket(@PathVariable UUID ticketId) {
         return ResponseEntity.ok(supportTicketService.getMyTicket(ticketId));
     }

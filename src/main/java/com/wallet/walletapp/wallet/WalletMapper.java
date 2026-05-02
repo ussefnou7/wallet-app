@@ -56,6 +56,8 @@ public class WalletMapper {
         response.setDailyPercent(toPercent(dailySpent, projection.getDailyLimit()));
         response.setMonthlyPercent(toPercent(monthlySpent, projection.getMonthlyLimit()));
         response.setType(projection.getType());
+        response.setCollectedAt(projection.getCollectedAt());
+        response.setCollectedByName(projection.getCollectedByName());
         response.setActive(projection.getActive());
         response.setCreatedAt(projection.getCreatedAt());
         response.setUpdatedAt(projection.getUpdatedAt());
